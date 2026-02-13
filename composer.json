@@ -16,7 +16,8 @@
     },
     "autoload": {
         "psr-4": {
-            "Raikia\\SeatTimerboard\\": "src/"
+            "Raikia\\SeatTimerboard\\": "src/",
+            "Raikia\\SeatTimerboard\\Database\\Seeds\\": "src/database/seeds/"
         }
     },
     "extra": {

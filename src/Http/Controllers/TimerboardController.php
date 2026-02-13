@@ -31,6 +31,7 @@ class TimerboardController extends Controller
             'structure_type' => 'required|string',
             'structure_name' => 'required|string',
             'owner_corporation' => 'required|string',
+            'attacker_corporation' => 'nullable|string',
             'time_input' => 'required|string',
             'tags' => 'array',
         ]);
@@ -46,6 +47,7 @@ class TimerboardController extends Controller
             'structure_type' => $request->input('structure_type'),
             'structure_name' => $request->input('structure_name'),
             'owner_corporation' => $request->input('owner_corporation'),
+            'attacker_corporation' => $request->input('attacker_corporation'),
             'user_id' => auth()->id(),
         ]);
 

@@ -60,6 +60,15 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="attacker_corporation">Attacker Corporation (Optional)</label>
+                    <select name="attacker_corporation" class="form-control select2-attacker-corporation" id="attacker_corporation" style="width: 100%;">
+                         @if(old('attacker_corporation'))
+                            <option value="{{ old('attacker_corporation') }}" selected>{{ old('attacker_corporation') }}</option>
+                        @endif
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label for="time_input">Time</label>
                     <input type="text" name="time_input" class="form-control" id="time_input" placeholder="YYYY.MM.DD HH:MM:SS or '2 days 4 hours'" required value="{{ old('time_input') }}">
                     <small class="form-text text-muted">Enter absolute EVE time (UTC) or relative time like '1d 4h 30m'.</small>
@@ -112,6 +121,29 @@
             theme: 'bootstrap4',
             placeholder: 'Search for a corporation...',
             minimumInputLength: 3,
+            ajax: {
+                url: '{{ route("timerboard.search.corporations") }}',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        q: params.term
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.results
+                    };
+                },
+                cache: true
+            }
+        });
+
+        $('.select2-attacker-corporation').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Search for an attacker (optional)...',
+            minimumInputLength: 3,
+            allowClear: true,
             ajax: {
                 url: '{{ route("timerboard.search.corporations") }}',
                 dataType: 'json',

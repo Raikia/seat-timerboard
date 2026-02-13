@@ -14,6 +14,7 @@ class Timer extends Model
         'structure_type',
         'structure_name',
         'owner_corporation',
+        'attacker_corporation',
         'eve_time',
         'user_id'
     ];
