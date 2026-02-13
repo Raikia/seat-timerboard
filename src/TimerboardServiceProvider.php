@@ -30,6 +30,7 @@ class TimerboardServiceProvider extends AbstractSeatPlugin
         $this->mergeConfigFrom(
             __DIR__ . '/Config/timerboard.sidebar.php', 'package.sidebar'
         );
+
     }
 
     /**

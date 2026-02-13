@@ -7,10 +7,8 @@ use Illuminate\Http\Request;
 use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\Tag;
 use Carbon\Carbon;
-use Seat\Eseye\Configuration;
-use Seat\Eseye\Eseye;
-use Seat\Eseye\Containers\EsiAuthentication;
 use Seat\Eveapi\Models\RefreshToken;
+use Seat\Eveapi\Services\EseyeClient;
 
 class TimerboardController extends Controller
 {
@@ -153,37 +151,26 @@ class TimerboardController extends Controller
             if (!$refreshToken) {
                  return response()->json(['results' => []]);
             }
-            $config = Configuration::getInstance();
-            // Create Authentication Container
-            $authentication = new EsiAuthentication([
-                'refresh_token' => $refreshToken->getRefreshToken(),
-                'access_token' => $refreshToken->getAccessToken(),
-                'client_id'     => config('eseye.esi.auth.client_id'),
-                'secret'        => config('eseye.esi.auth.client_secret'),
-                'scopes' => $refreshToken->scopes,
-                'token_expires' => $refreshToken->expires_on
-            ]);
 
-
-            $esi = new Eseye($authentication);
-
-            $searchResponse = $esi->setQueryString([
+            $esiClient = new EseyeClient();
+            $esiClient->setAuthentication($refreshToken);
+            $searchResponse = $esiClient->setQueryString([
                 'categories' => ['corporation'],
                 'search' => $query,
             ])->invoke('get', '/characters/{character_id}/search/', [
                 'character_id' => $characterId,
             ]);
 
-            if (!isset($searchResponse->corporation) || empty($searchResponse->corporation)) {
+            if (!isset($searchResponse->getBody()->corporation) || empty($searchResponse->getBody()->corporation)) {
                 return response()->json(['results' => []]);
             }
 
-            $ids = array_slice($searchResponse->corporation, 0, 20);
+            $ids = array_slice($searchResponse->getBody()->corporation, 0, 20);
 
             // Resolve IDs to Names (Public endpoint)
-            $namesResponse = $esi->invoke('post', '/universe/names/', $ids);
+            $namesResponse = $esiClient->setBody($ids)->invoke('post', '/universe/names/');
 
-            $formatted = collect($namesResponse)->map(function ($item) {
+            $formatted = collect($namesResponse->getBody())->map(function ($item) {
                 return [
                     'id' => $item->name,
                     'text' => $item->name
