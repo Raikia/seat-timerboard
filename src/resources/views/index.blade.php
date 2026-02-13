@@ -14,10 +14,13 @@
         <div class="card-body">
             <div class="tab-content">
                 <div class="tab-pane active" id="current">
-                    <div class="mb-2">
+                    <div class="mb-2 d-flex justify-content-between align-items-center">
                         <button type="button" class="btn btn-primary btn-sm" id="create-timer-btn">
                             <i class="fas fa-plus"></i> Add Timer
                         </button>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> Timers remain in "Current" for 2 hours after elapsing.
+                        </small>
                     </div>
                     <table class="table table-hover table-striped timers-table" id="current-timers-table">
                         <thead>
@@ -59,7 +62,13 @@
                                             <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
                                         @endforeach
                                     </td>
-                                    <td>{{ $timer->user->name ?? 'Unknown' }}</td>
+                                    <td>
+                                        {{ $timer->user->name ?? 'Unknown' }}
+                                        <br>
+                                        <span class="text-muted small">
+                                            {{ $timer->role ? $timer->role->title : 'Public' }}
+                                        </span>
+                                    </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             @can('seat-timerboard.edit')
@@ -127,7 +136,13 @@
                                             <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
                                         @endforeach
                                     </td>
-                                    <td>{{ $timer->user->name ?? 'Unknown' }}</td>
+                                    <td>
+                                        {{ $timer->user->name ?? 'Unknown' }}
+                                        <br>
+                                        <span class="text-muted small">
+                                            {{ $timer->role ? $timer->role->title : 'Public' }}
+                                        </span>
+                                    </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
                                             @can('seat-timerboard.edit')

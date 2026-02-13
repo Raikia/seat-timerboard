@@ -25,11 +25,13 @@ class TimerboardController extends Controller
             ->get();
 
         $currentTimers = $allTimers->filter(function ($timer) use ($now) {
-            return $timer->eve_time >= $now;
+            // Keep timers in "Current" if they are in the future OR elapsed less than 2 hours ago
+            return $timer->eve_time >= $now->copy()->subHours(2);
         });
 
         $elapsedTimers = $allTimers->filter(function ($timer) use ($now) {
-            return $timer->eve_time < $now;
+            // "Elapsed" only contains timers older than 2 hours
+            return $timer->eve_time < $now->copy()->subHours(2);
         });
 
         $tags = Tag::orderBy('name')->get();
