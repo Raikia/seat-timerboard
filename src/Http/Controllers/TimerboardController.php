@@ -15,14 +15,19 @@ class TimerboardController extends Controller
     public function index()
     {
         $now = Carbon::now();
-        $userRoles = auth()->user()->roles->pluck('id');
-        $allTimers = Timer::with('tags', 'user', 'mapDenormalize.region', 'mapDenormalize.system', 'role')
-            ->where(function ($query) use ($userRoles) {
-                $query->whereNull('role_id')
+        $user = auth()->user();
+        $userRoles = $user->roles->pluck('id');
+        
+        $query = Timer::with('tags', 'user', 'mapDenormalize.region', 'mapDenormalize.system', 'role');
+
+        if (!$user->isAdmin()) {
+             $query->where(function ($q) use ($userRoles) {
+                $q->whereNull('role_id')
                       ->orWhereIn('role_id', $userRoles);
-            })
-            ->orderBy('eve_time', 'asc')
-            ->get();
+            });
+        }
+            
+        $allTimers = $query->orderBy('eve_time', 'asc')->get();
 
         $currentTimers = $allTimers->filter(function ($timer) use ($now) {
             // Keep timers in "Current" if they are in the future OR elapsed less than 2 hours ago
