@@ -57,7 +57,7 @@
                                                     </div>
                                                     <div class="form-group">
                                                         <label for="color">Color</label>
-                                                        <input type="color" class="form-control" name="color" id="color" value="{{ $tag->color }}" required>
+                                                        <input type="color" class="form-control" name="color" id="color" value="{{ $tag->color }}" required style="width: 50px;">
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">

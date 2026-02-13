@@ -11,10 +11,6 @@ Route::group([
     ]);
 
     Route::group(['middleware' => 'can:seat-timerboard.create'], function () {
-        Route::get('/create', [
-            'as'   => 'timerboard.create',
-            'uses' => 'TimerboardController@create',
-        ]);
         Route::post('/create', [
             'as'   => 'timerboard.store',
             'uses' => 'TimerboardController@store',
@@ -28,11 +24,7 @@ Route::group([
             'uses' => 'TimerboardController@searchCorporations',
         ]);
         Route::group(['middleware' => 'can:seat-timerboard.edit'], function () {
-            Route::get('/{timer}/edit', [
-                'as'   => 'timerboard.edit',
-                'uses' => 'TimerboardController@edit',
-            ]);
-            Route::post('/{timer}', [
+            Route::put('/{timer}', [
                 'as'   => 'timerboard.update',
                 'uses' => 'TimerboardController@update',
             ]);

@@ -14,15 +14,12 @@ class TimerboardController extends Controller
 {
     public function index()
     {
-        $timers = Timer::with('tags', 'user', 'mapDenormalize.region')->orderBy('eve_time', 'asc')->get();
-        return view('seat-timerboard::index', compact('timers'));
+        $timers = Timer::with('tags', 'user', 'mapDenormalize.region', 'mapDenormalize.system')->orderBy('eve_time', 'asc')->get();
+        $tags = Tag::all();
+        return view('seat-timerboard::index', compact('timers', 'tags'));
     }
 
-    public function create()
-    {
-        $tags = Tag::all();
-        return view('seat-timerboard::create', compact('tags'));
-    }
+
 
     public function store(Request $request)
     {
@@ -196,12 +193,7 @@ class TimerboardController extends Controller
         }
     }
 
-    public function edit($id)
-    {
-        $timer = Timer::with('tags')->findOrFail($id);
-        $tags = Tag::all();
-        return view('seat-timerboard::edit', compact('timer', 'tags'));
-    }
+
 
     public function update(Request $request, $id)
     {

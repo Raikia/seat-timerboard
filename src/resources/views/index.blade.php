@@ -8,9 +8,9 @@
         <div class="card-header">
             <h3 class="card-title">Structure Timers</h3>
             <div class="card-tools">
-                <a href="{{ route('timerboard.create') }}" class="btn btn-primary btn-sm">
+                <button type="button" class="btn btn-primary btn-sm" id="create-timer-btn">
                     <i class="fas fa-plus"></i> Add Timer
-                </a>
+                </button>
             </div>
         </div>
         <div class="card-body">
@@ -59,9 +59,11 @@
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     @can('seat-timerboard.edit')
-                                        <a href="{{ route('timerboard.edit', $timer->id) }}" class="btn btn-warning" title="Edit">
+                                        <button type="button" class="btn btn-warning edit-timer-btn" title="Edit"
+                                            data-timer='@json($timer)'
+                                            data-tags='@json($timer->tags->pluck("id"))'>
                                             <i class="fas fa-pencil-alt"></i>
-                                        </a>
+                                        </button>
                                     @endcan
                                     @can('seat-timerboard.delete')
                                         <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
@@ -80,11 +82,296 @@
             </table>
         </div>
     </div>
+
+    <!-- Timer Modal -->
+    <div class="modal fade" id="timerModal" tabindex="-1" role="dialog" aria-labelledby="timerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="timerModalLabel">Timer</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="timerForm" action="" method="POST">
+                    {{ csrf_field() }}
+                    <input type="hidden" name="_method" id="formMethod" value="POST">
+                    <input type="hidden" name="timer_id" id="timer_id" value="">
+                    
+                    <div class="modal-body">
+                        
+                        <div class="form-group">
+                            <label for="system">System / Location</label>
+                            <select name="system" class="form-control select2-system" id="system" required style="width: 100%;">
+                                @if(old('system'))
+                                    <option value="{{ old('system') }}" selected>{{ old('system') }}</option>
+                                @endif
+                                <!-- Suggestion via AJAX -->
+                            </select>
+                            <small class="text-muted">Search for a solar system or celestial (e.g. Moon, Planet)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="structure_type">Structure Type</label>
+                            <select name="structure_type" class="form-control select2-structure-type" id="structure_type" required style="width: 100%;">
+                                <option value="">Select Type</option>
+                                <option value="Ansiblex">Ansiblex Jump Gate</option>
+                                <option value="Astrahus">Astrahus</option>
+                                <option value="Athanor">Athanor</option>
+                                <option value="Azbel">Azbel</option>
+                                <option value="POCO">Customs Office</option>
+                                <option value="Fortizar">Fortizar</option>
+                                <option value="Keepstar">Keepstar</option>
+                                <option value="Metenox">Metenox Moon Drill</option>                        
+                                <option value="Pharolux">Pharolux Cyno Beacon</option>
+                                <option value="POS">POS</option>
+                                <option value="Raitaru">Raitaru</option>
+                                <option value="Skyhook">Skyhook</option>
+                                <option value="Sotiyo">Sotiyo</option>
+                                <option value="Tatara">Tatara</option>
+                                <option value="Tenebrex">Tenebrex Jammer</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="structure_name">Structure Name</label>
+                            <input type="text" name="structure_name" class="form-control" id="structure_name" placeholder="Structure Name" value="{{ old('structure_name') }}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="owner_corporation">Owner</label>
+                            <select name="owner_corporation" class="form-control select2-corporation" id="owner_corporation" required style="width: 100%;">
+                                @if(old('owner_corporation'))
+                                    <option value="{{ old('owner_corporation') }}" selected>{{ old('owner_corporation') }}</option>
+                                @endif
+                                <!-- Suggestion via AJAX -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="attacker_corporation">Attacker (Optional)</label>
+                            <select name="attacker_corporation" class="form-control select2-attacker-corporation" id="attacker_corporation" style="width: 100%;">
+                                @if(old('attacker_corporation'))
+                                    <option value="{{ old('attacker_corporation') }}" selected>{{ old('attacker_corporation') }}</option>
+                                @endif
+                                <!-- Suggestion via AJAX -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="time_input">Time</label>
+                            <input type="text" name="time_input" class="form-control" id="time_input" placeholder="YYYY.MM.DD HH:MM:SS or '2 days 4 hours'" value="{{ old('time_input') }}" required>
+                            <small class="form-text text-muted">Enter absolute EVE time (UTC) or relative time like '1d 4h 30m'.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Tags</label>
+                            @foreach($tags as $tag)
+                                <div class="form-check">
+                                    <input class="form-check-input tag-checkbox" type="checkbox" name="tags[]" value="{{ $tag->id }}" id="tag_{{ $tag->id }}">
+                                    <label class="form-check-label" for="tag_{{ $tag->id }}" style="color: {{ $tag->color }}">
+                                        {{ $tag->name }}
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary" id="saveTimerBtn">Save Timer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('javascript')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    $(document).ready(function() {
+        
+        // Initialize Select2
+        function initSelect2() {
+            $('.select2-structure-type').select2({
+                theme: 'bootstrap4',
+                dropdownParent: $('#timerModal'),
+                placeholder: 'Select Structure Type',
+                allowClear: true
+            });
+
+            $('.select2-system').select2({
+                theme: 'bootstrap4',
+                dropdownParent: $('#timerModal'),
+                placeholder: 'Search for a system or celestial...',
+                minimumInputLength: 3,
+                ajax: {
+                    url: '{{ route("timerboard.search.systems") }}',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return { q: params.term };
+                    },
+                    processResults: function (data) {
+                        return { results: data.results };
+                    },
+                    cache: true
+                }
+            });
+
+            $('.select2-corporation').select2({
+                theme: 'bootstrap4',
+                dropdownParent: $('#timerModal'),
+                placeholder: 'Search for corporation or alliance...',
+                minimumInputLength: 3,
+                ajax: {
+                    url: '{{ route("timerboard.search.corporations") }}',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return { q: params.term };
+                    },
+                    processResults: function (data) {
+                        return { results: data.results };
+                    },
+                    cache: true
+                }
+            });
+
+             $('.select2-attacker-corporation').select2({
+                theme: 'bootstrap4',
+                dropdownParent: $('#timerModal'),
+                placeholder: 'Search for attacker (corp/alliance)...',
+                minimumInputLength: 3,
+                allowClear: true,
+                ajax: {
+                    url: '{{ route("timerboard.search.corporations") }}',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return { q: params.term };
+                    },
+                    processResults: function (data) {
+                        return { results: data.results };
+                    },
+                    cache: true
+                }
+            });
+        }
+
+        initSelect2();
+
+        // Handle "Add Timer" click
+        $('#create-timer-btn').click(function() {
+            $('#timerModalLabel').text('Add Timer');
+            $('#timerForm').attr('action', '{{ route("timerboard.store") }}');
+            $('#formMethod').val('POST');
+            $('#timerForm')[0].reset();
+            $('#timer_id').val('');
+            
+            // Clear Select2s
+            $('.select2-system').val(null).trigger('change');
+            $('.select2-structure-type').val(null).trigger('change');
+            $('.select2-corporation').val(null).trigger('change');
+            $('.select2-attacker-corporation').val(null).trigger('change');
+            
+            // Uncheck all tags
+            $('.tag-checkbox').prop('checked', false);
+
+            $('#timerModal').modal('show');
+        });
+
+        // Handle "Edit Timer" click
+        $('.edit-timer-btn').click(function() {
+            var timer = $(this).data('timer');
+            var tags = $(this).data('tags'); // Array of tag IDs
+
+            $('#timerModalLabel').text('Edit Timer');
+            
+            var url = '{{ route("timerboard.update", ":id") }}';
+            url = url.replace(':id', timer.id);
+            
+            $('#timerForm').attr('action', url);
+            $('#formMethod').val('PUT');
+            $('#timer_id').val(timer.id);
+
+            // Populate fields
+            $('#structure_name').val(timer.structure_name);
+            
+            // Format time YYYY.MM.DD HH:MM:SS
+            var date = new Date(timer.eve_time);
+            var formattedTime = date.getUTCFullYear() + "." +
+                                ("0" + (date.getUTCMonth() + 1)).slice(-2) + "." +
+                                ("0" + date.getUTCDate()).slice(-2) + " " +
+                                ("0" + date.getUTCHours()).slice(-2) + ":" +
+                                ("0" + date.getUTCMinutes()).slice(-2) + ":" +
+                                ("0" + date.getUTCSeconds()).slice(-2);
+            $('#time_input').val(formattedTime); 
+
+            // Populate Select2s (System)
+            var systemOption = new Option(timer.system, timer.system, true, true);
+            $('.select2-system').append(systemOption).trigger('change');
+
+            // Structure Type
+            $('.select2-structure-type').val(timer.structure_type).trigger('change');
+
+            // Owner Corp
+            var ownerOption = new Option(timer.owner_corporation, timer.owner_corporation, true, true);
+            $('.select2-corporation').append(ownerOption).trigger('change');
+
+            // Attacker Corp
+            if (timer.attacker_corporation) {
+                var attackerOption = new Option(timer.attacker_corporation, timer.attacker_corporation, true, true);
+                $('.select2-attacker-corporation').append(attackerOption).trigger('change');
+            } else {
+                 $('.select2-attacker-corporation').val(null).trigger('change');
+            }
+
+            // Tags
+            $('.tag-checkbox').prop('checked', false);
+            if (tags) {
+                tags.forEach(function(tagId) {
+                    $('#tag_' + tagId).prop('checked', true);
+                });
+            }
+
+            $('#timerModal').modal('show');
+        });
+
+        @if($errors->any())
+            $('#timerModal').modal('show');
+            var oldMethod = '{{ old("_method") }}';
+            if (oldMethod === 'PUT') {
+                var timerId = '{{ old("timer_id") }}';
+                var url = '{{ route("timerboard.update", ":id") }}';
+                url = url.replace(':id', timerId);
+                $('#timerForm').attr('action', url);
+                $('#timerModalLabel').text('Edit Timer');
+                $('#formMethod').val('PUT');
+                $('#timer_id').val(timerId); // Restore ID
+            } else {
+                 $('#timerForm').attr('action', '{{ route("timerboard.store") }}');
+                 $('#timerModalLabel').text('Add Timer');
+                 $('#formMethod').val('POST');
+            }
+            
+            // Restore Structure Type Select2
+            var oldType = '{{ old("structure_type") }}';
+            if(oldType) {
+                 $('.select2-structure-type').val(oldType).trigger('change');
+            }
+
+            // Restore Tags
+            var oldTags = @json(old('tags', []));
+            if(oldTags && oldTags.length > 0) {
+                 oldTags.forEach(function(tagId) {
+                      $('#tag_' + tagId).prop('checked', true);
+                 });
+            }
+        @endif
+
+        // Existing DataTable and Timer Logic
         $('#timers-table').DataTable({
             "order": [[ 5, "asc" ]], // Sort by Eve Time (6th column, index 5)
             "columnDefs": [
