@@ -85,4 +85,20 @@
             </form>
         </div>
     </div>
+
+    @can('seat-timerboard.delete')
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3 class="card-title">Maintenance</h3>
+        </div>
+        <div class="card-body">
+            <p>Use this button to remove all timers that have already elapsed. This action cannot be undone.</p>
+            <form action="{{ route('timerboard.destroy.elapsed') }}" method="POST" onsubmit="return confirm('Are you sure you want to delete ALL elapsed timers? This action cannot be undone.');">
+                {{ csrf_field() }}
+                {{ method_field('DELETE') }}
+                <button type="submit" class="btn btn-danger">Delete All Elapsed Timers</button>
+            </form>
+        </div>
+    </div>
+    @endcan
 @endsection

@@ -254,4 +254,11 @@ class TimerboardController extends Controller
 
         return redirect()->route('timerboard.index')->with('success', 'Timer deleted successfully.');
     }
+
+    public function destroyElapsed()
+    {
+        Timer::where('eve_time', '<', Carbon::now())->delete();
+
+        return redirect()->route('timerboard.settings')->with('success', 'All elapsed timers deleted successfully.');
+    }
 }

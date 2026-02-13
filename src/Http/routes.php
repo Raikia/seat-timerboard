@@ -31,6 +31,11 @@ Route::group([
         });
 
         Route::group(['middleware' => 'can:seat-timerboard.delete'], function () {
+            Route::delete('/destroy-elapsed', [
+                 'as' => 'timerboard.destroy.elapsed',
+                 'uses' => 'TimerboardController@destroyElapsed',
+            ]);
+            
             Route::delete('/{timer}', [
                 'as'   => 'timerboard.destroy',
                 'uses' => 'TimerboardController@destroy',
