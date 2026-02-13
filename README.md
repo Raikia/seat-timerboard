@@ -25,7 +25,7 @@ A powerful and feature-rich timerboard plugin for tracking structure reinforce t
 
 1.  **Require the Package**:
     Either add "raikia/seat-timerboard" to your .env plugins array or run:
-    
+
     ```bash
     composer require raikia/seat-timerboard
     ```
@@ -81,3 +81,8 @@ Navigate to **Timerboard** in the sidebar.
 *   **Add Timer**: Click the "Add Timer" button (requires permission).
 *   **View**: Timers are sorted by time. "Current" tab shows upcoming timers and those that elapsed < 2 hours ago.
 *   **Search**: Use the search bar in the creation modal to find systems and corporations (requires ESI scope).
+
+
+## Development
+
+Raikia Nardieu
