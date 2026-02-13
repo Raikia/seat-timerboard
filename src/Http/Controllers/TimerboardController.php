@@ -27,7 +27,7 @@ class TimerboardController extends Controller
             return $timer->eve_time < $now;
         });
 
-        $tags = Tag::all();
+        $tags = Tag::orderBy('name')->get();
         return view('seat-timerboard::index', compact('currentTimers', 'elapsedTimers', 'tags'));
     }
 
@@ -38,7 +38,7 @@ class TimerboardController extends Controller
         $request->validate([
             'system' => 'required|string',
             'structure_type' => 'required|string',
-            'structure_name' => 'required|string',
+            'structure_name' => 'nullable|string',
             'owner_corporation' => 'required|string',
             'attacker_corporation' => 'nullable|string',
             'time_input' => 'required|string',
@@ -214,7 +214,7 @@ class TimerboardController extends Controller
         $request->validate([
             'system' => 'required|string',
             'structure_type' => 'required|string',
-            'structure_name' => 'required|string',
+            'structure_name' => 'nullable|string',
             'owner_corporation' => 'required|string',
             'attacker_corporation' => 'nullable|string',
             'time_input' => 'required|string',

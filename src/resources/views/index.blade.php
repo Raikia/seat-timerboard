@@ -177,7 +177,7 @@
                     <div class="modal-body">
                         
                         <div class="form-group">
-                            <label for="system">System / Location</label>
+                            <label for="system">System / Location <span class="text-danger">*</span></label>
                             <select name="system" class="form-control select2-system" id="system" required style="width: 100%;">
                                 @if(old('system'))
                                     <option value="{{ old('system') }}" selected>{{ old('system') }}</option>
@@ -188,7 +188,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="structure_type">Structure Type</label>
+                            <label for="structure_type">Structure Type <span class="text-danger">*</span></label>
                             <select name="structure_type" class="form-control select2-structure-type" id="structure_type" required style="width: 100%;">
                                 <option value="">Select Type</option>
                                 <option value="Ansiblex">Ansiblex Jump Gate</option>
@@ -212,11 +212,11 @@
 
                         <div class="form-group">
                             <label for="structure_name">Structure Name</label>
-                            <input type="text" name="structure_name" class="form-control" id="structure_name" placeholder="Structure Name" value="{{ old('structure_name') }}" required>
+                            <input type="text" name="structure_name" class="form-control" id="structure_name" placeholder="Structure Name" value="{{ old('structure_name') }}">
                         </div>
 
                         <div class="form-group">
-                            <label for="owner_corporation">Owner</label>
+                            <label for="owner_corporation">Owner <span class="text-danger">*</span></label>
                             <select name="owner_corporation" class="form-control select2-corporation" id="owner_corporation" required style="width: 100%;">
                                 @if(old('owner_corporation'))
                                     <option value="{{ old('owner_corporation') }}" selected>{{ old('owner_corporation') }}</option>
@@ -236,21 +236,25 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="time_input">Time</label>
+                            <label for="time_input">Time <span class="text-danger">*</span></label>
                             <input type="text" name="time_input" class="form-control" id="time_input" placeholder="YYYY.MM.DD HH:MM:SS or '2 days 4 hours'" value="{{ old('time_input') }}" required>
                             <small class="form-text text-muted">Enter absolute EVE time (UTC) or relative time like '1d 4h 30m'.</small>
                         </div>
 
                         <div class="form-group">
                             <label>Tags</label>
-                            @foreach($tags as $tag)
-                                <div class="form-check">
-                                    <input class="form-check-input tag-checkbox" type="checkbox" name="tags[]" value="{{ $tag->id }}" id="tag_{{ $tag->id }}">
-                                    <label class="form-check-label" for="tag_{{ $tag->id }}" style="color: {{ $tag->color }}">
-                                        {{ $tag->name }}
-                                    </label>
-                                </div>
-                            @endforeach
+                            <div class="d-flex flex-wrap">
+                                @foreach($tags as $tag)
+                                    <div class="m-1">
+                                        <input type="checkbox" name="tags[]" value="{{ $tag->id }}" id="tag_{{ $tag->id }}" class="d-none tag-checkbox">
+                                        <label class="badge p-2 tag-badge" for="tag_{{ $tag->id }}" 
+                                               style="background-color: {{ $tag->color }}; color: #fff; cursor: pointer; opacity: 0.5; border: 2px solid transparent;"
+                                               data-color="{{ $tag->color }}">
+                                            {{ $tag->name }}
+                                        </label>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
 
                     </div>
@@ -352,10 +356,22 @@
             $('.select2-corporation').val(null).trigger('change');
             $('.select2-attacker-corporation').val(null).trigger('change');
             
-            // Uncheck all tags
-            $('.tag-checkbox').prop('checked', false);
+            // Uncheck all tags and reset visuals
+            $('.tag-checkbox').prop('checked', false).trigger('change');
 
             $('#timerModal').modal('show');
+        });
+        
+        // Tag visual toggle
+        $(document).on('change', '.tag-checkbox', function() {
+            var label = $('label[for="' + $(this).attr('id') + '"]');
+            if($(this).is(':checked')) {
+                label.css('opacity', '1');
+                label.css('box-shadow', '0 0 5px rgba(0,0,0,0.5)');
+            } else {
+                label.css('opacity', '0.5');
+                label.css('box-shadow', 'none');
+            }
         });
 
         // Handle "Edit Timer" click
@@ -405,10 +421,10 @@
             }
 
             // Tags
-            $('.tag-checkbox').prop('checked', false);
+            $('.tag-checkbox').prop('checked', false).trigger('change');
             if (tags) {
                 tags.forEach(function(tagId) {
-                    $('#tag_' + tagId).prop('checked', true);
+                    $('#tag_' + tagId).prop('checked', true).trigger('change');
                 });
             }
 
@@ -442,7 +458,7 @@
             var oldTags = @json(old('tags', []));
             if(oldTags && oldTags.length > 0) {
                  oldTags.forEach(function(tagId) {
-                      $('#tag_' + tagId).prop('checked', true);
+                      $('#tag_' + tagId).prop('checked', true).trigger('change');
                  });
             }
         @endif

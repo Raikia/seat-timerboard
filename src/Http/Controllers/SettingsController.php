@@ -10,7 +10,7 @@ class SettingsController extends Controller
 {
     public function index()
     {
-        $tags = Tag::all();
+        $tags = Tag::orderBy('name')->get();
         return view('seat-timerboard::settings', compact('tags'));
     }
 
