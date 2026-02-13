@@ -14,11 +14,6 @@
             </div>
         </div>
         <div class="card-body">
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
 
             <table class="table table-hover table-striped" id="timers-table">
                 <thead>
@@ -27,11 +22,13 @@
                         <th>Type</th>
                         <th>Name</th>
                         <th>Owner</th>
+                        <th>Attacker</th>
                         <th>Eve Time (UTC)</th>
                         <th>Local Time</th>
                         <th>Countdown</th>
                         <th>Tags</th>
                         <th>Created By</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -41,8 +38,9 @@
                             <td>{{ $timer->structure_type }}</td>
                             <td>{{ $timer->structure_name }}</td>
                             <td>{{ $timer->owner_corporation }}</td>
+                            <td>{{ $timer->attacker_corporation }}</td>
                             <td>{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
-                            <td class="local-time">Calculating...</td>
+                            <td class="local-time" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
                             <td class="countdown font-weight-bold">Calculating...</td>
                             <td>
                                 @foreach($timer->tags as $tag)
@@ -50,6 +48,24 @@
                                 @endforeach
                             </td>
                             <td>{{ $timer->user->name ?? 'Unknown' }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    @can('seat-timerboard.edit')
+                                        <a href="{{ route('timerboard.edit', $timer->id) }}" class="btn btn-warning" title="Edit">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </a>
+                                    @endcan
+                                    @can('seat-timerboard.delete')
+                                        <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
+                                            {{ csrf_field() }}
+                                            {{ method_field('DELETE') }}
+                                            <button type="submit" class="btn btn-danger" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </div>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -61,6 +77,17 @@
 @push('javascript')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        $('#timers-table').DataTable({
+            "order": [[ 5, "asc" ]], // Sort by Eve Time (6th column, index 5)
+            "columnDefs": [
+                { "orderable": false, "targets": [8, 10] } // Disable sorting on Tags (9th column, index 8) and Actions (11th column, index 10)
+            ],
+            "stateSave": true, // Save state (pagination, filtering, sorting)
+            "paging": true,
+            "pageLength": 25,
+            "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ]
+        });
+
         function updateTimers() {
             const now = new Date();
             const rows = document.querySelectorAll('.timer-row');

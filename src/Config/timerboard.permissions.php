@@ -13,4 +13,12 @@ return [
         'label' => 'seat-timerboard::permissions.settings_label',
         'description' => 'seat-timerboard::permissions.settings_description',
     ],
+    'edit' => [
+        'label' => 'Edit Timers',
+        'description' => 'Permission to edit existing timers.',
+    ],
+    'delete' => [
+        'label' => 'Delete Timers',
+        'description' => 'Permission to delete existing timers.',
+    ],
 ];

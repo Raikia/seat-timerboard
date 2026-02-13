@@ -157,17 +157,26 @@ class TimerboardController extends Controller
             $esiClient = new EseyeClient();
             $esiClient->setAuthentication($refreshToken);
             $searchResponse = $esiClient->setQueryString([
-                'categories' => ['corporation'],
+                'categories' => ['corporation', 'alliance'],
                 'search' => $query,
             ])->invoke('get', '/characters/{character_id}/search/', [
                 'character_id' => $characterId,
             ]);
 
-            if (!isset($searchResponse->getBody()->corporation) || empty($searchResponse->getBody()->corporation)) {
+            $ids = [];
+            if (isset($searchResponse->getBody()->corporation)) {
+                $ids = array_merge($ids, $searchResponse->getBody()->corporation);
+            }
+            if (isset($searchResponse->getBody()->alliance)) {
+                $ids = array_merge($ids, $searchResponse->getBody()->alliance);
+            }
+
+            if (empty($ids)) {
                 return response()->json(['results' => []]);
             }
 
-            $ids = array_slice($searchResponse->getBody()->corporation, 0, 20);
+            // Limit to 20 results total
+            $ids = array_slice($ids, 0, 20);
 
             // Resolve IDs to Names (Public endpoint)
             $namesResponse = $esiClient->setBody($ids)->invoke('post', '/universe/names/');
@@ -175,15 +184,70 @@ class TimerboardController extends Controller
             $formatted = collect($namesResponse->getBody())->map(function ($item) {
                 return [
                     'id' => $item->name,
-                    'text' => $item->name
+                    'text' => $item->name . ' (' . ucfirst($item->category) . ')'
                 ];
             });
 
             return response()->json(['results' => $formatted]);
 
         } catch (\Exception $e) {
-            \Log::error('Corporation Search Error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            \Log::error('Entity Search Error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
             return response()->json(['results' => []]);
         }
+    }
+
+    public function edit($id)
+    {
+        $timer = Timer::with('tags')->findOrFail($id);
+        $tags = Tag::all();
+        return view('seat-timerboard::edit', compact('timer', 'tags'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $timer = Timer::findOrFail($id);
+
+        $request->validate([
+            'system' => 'required|string',
+            'structure_type' => 'required|string',
+            'structure_name' => 'required|string',
+            'owner_corporation' => 'required|string',
+            'attacker_corporation' => 'nullable|string',
+            'time_input' => 'required|string',
+            'tags' => 'array',
+        ]);
+
+        $eveTime = $this->parseTimeInput($request->input('time_input'));
+
+        if (!$eveTime) {
+            return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM:SS or "X days Y hours".'])->withInput();
+        }
+
+        $timer->update([
+            'system' => $request->input('system'),
+            'structure_type' => $request->input('structure_type'),
+            'structure_name' => $request->input('structure_name'),
+            'owner_corporation' => $request->input('owner_corporation'),
+            'attacker_corporation' => $request->input('attacker_corporation'),
+        ]);
+
+        $timer->eve_time = $eveTime;
+        $timer->save();
+
+        if ($request->has('tags')) {
+            $timer->tags()->sync($request->input('tags'));
+        } else {
+            $timer->tags()->detach();
+        }
+
+        return redirect()->route('timerboard.index')->with('success', 'Timer updated successfully.');
+    }
+
+    public function destroy($id)
+    {
+        $timer = Timer::findOrFail($id);
+        $timer->delete();
+
+        return redirect()->route('timerboard.index')->with('success', 'Timer deleted successfully.');
     }
 }

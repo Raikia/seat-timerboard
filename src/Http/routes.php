@@ -27,6 +27,23 @@ Route::group([
             'as'   => 'timerboard.search.corporations',
             'uses' => 'TimerboardController@searchCorporations',
         ]);
+        Route::group(['middleware' => 'can:seat-timerboard.edit'], function () {
+            Route::get('/{timer}/edit', [
+                'as'   => 'timerboard.edit',
+                'uses' => 'TimerboardController@edit',
+            ]);
+            Route::post('/{timer}', [
+                'as'   => 'timerboard.update',
+                'uses' => 'TimerboardController@update',
+            ]);
+        });
+
+        Route::group(['middleware' => 'can:seat-timerboard.delete'], function () {
+            Route::delete('/{timer}', [
+                'as'   => 'timerboard.destroy',
+                'uses' => 'TimerboardController@destroy',
+            ]);
+        });
     });
 
     Route::group(['middleware' => 'can:seat-timerboard.settings', 'prefix' => 'settings'], function () {

@@ -1,23 +1,21 @@
 @extends('web::layouts.grids.12')
 
-@section('title', 'Create Timer')
-@section('page_header', 'Create Timer')
+@section('title', 'Edit Timer')
+@section('page_header', 'Edit Timer')
 
 @section('content')
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">New Structure Timer</h3>
+            <h3 class="card-title">Edit Structure Timer</h3>
         </div>
         <div class="card-body">
-            <form action="{{ route('timerboard.store') }}" method="POST">
+            <form action="{{ route('timerboard.update', $timer->id) }}" method="POST">
                 {{ csrf_field() }}
 
                 <div class="form-group">
                     <label for="system">System / Location</label>
                     <select name="system" class="form-control select2-system" id="system" required style="width: 100%;">
-                        @if(old('system'))
-                            <option value="{{ old('system') }}" selected>{{ old('system') }}</option>
-                        @endif
+                        <option value="{{ old('system', $timer->system) }}" selected>{{ old('system', $timer->system) }}</option>
                     </select>
                     <small class="text-muted">Search for a solar system or celestial (e.g. Moon, Planet)</small>
                 </div>
@@ -25,7 +23,7 @@
                 <div class="form-group">
                     <label for="structure_type">Structure Type</label>
                     <select name="structure_type" class="form-control select2-structure-type" id="structure_type" required>
-                        <option value="">Select Type</option>
+                        <option value="{{ old('structure_type', $timer->structure_type) }}" selected>{{ old('structure_type', $timer->structure_type) }}</option>
                         <option value="Ansiblex">Ansiblex Jump Gate</option>
                         <option value="Astrahus">Astrahus</option>
                         <option value="Athanor">Athanor</option>
@@ -47,30 +45,28 @@
 
                 <div class="form-group">
                     <label for="structure_name">Structure Name</label>
-                    <input type="text" name="structure_name" class="form-control" id="structure_name" placeholder="Structure Name" required value="{{ old('structure_name') }}">
+                    <input type="text" name="structure_name" class="form-control" id="structure_name" placeholder="Structure Name" required value="{{ old('structure_name', $timer->structure_name) }}">
                 </div>
 
                 <div class="form-group">
                     <label for="owner_corporation">Owner Corporation</label>
                     <select name="owner_corporation" class="form-control select2-corporation" id="owner_corporation" required style="width: 100%;">
-                         @if(old('owner_corporation'))
-                            <option value="{{ old('owner_corporation') }}" selected>{{ old('owner_corporation') }}</option>
-                        @endif
+                        <option value="{{ old('owner_corporation', $timer->owner_corporation) }}" selected>{{ old('owner_corporation', $timer->owner_corporation) }}</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label for="attacker_corporation">Attacker Corporation (Optional)</label>
                     <select name="attacker_corporation" class="form-control select2-attacker-corporation" id="attacker_corporation" style="width: 100%;">
-                         @if(old('attacker_corporation'))
-                            <option value="{{ old('attacker_corporation') }}" selected>{{ old('attacker_corporation') }}</option>
+                         @if(old('attacker_corporation', $timer->attacker_corporation))
+                            <option value="{{ old('attacker_corporation', $timer->attacker_corporation) }}" selected>{{ old('attacker_corporation', $timer->attacker_corporation) }}</option>
                         @endif
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label for="time_input">Time</label>
-                    <input type="text" name="time_input" class="form-control" id="time_input" placeholder="YYYY.MM.DD HH:MM:SS or '2 days 4 hours'" required value="{{ old('time_input') }}">
+                    <input type="text" name="time_input" class="form-control" id="time_input" placeholder="YYYY.MM.DD HH:MM:SS or '2 days 4 hours'" required value="{{ old('time_input', $timer->eve_time->format('Y.m.d H:i:s')) }}">
                     <small class="form-text text-muted">Enter absolute EVE time (UTC) or relative time like '1d 4h 30m'.</small>
                 </div>
 
@@ -78,7 +74,7 @@
                     <label>Tags</label>
                     @foreach($tags as $tag)
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="tags[]" value="{{ $tag->id }}" id="tag_{{ $tag->id }}">
+                            <input class="form-check-input" type="checkbox" name="tags[]" value="{{ $tag->id }}" id="tag_{{ $tag->id }}" {{ $timer->tags->contains($tag->id) ? 'checked' : '' }}>
                             <label class="form-check-label" for="tag_{{ $tag->id }}" style="color: {{ $tag->color }}">
                                 {{ $tag->name }}
                             </label>
@@ -86,7 +82,7 @@
                     @endforeach
                 </div>
 
-                <button type="submit" class="btn btn-primary">Create Timer</button>
+                <button type="submit" class="btn btn-primary">Update Timer</button>
             </form>
         </div>
     </div>
