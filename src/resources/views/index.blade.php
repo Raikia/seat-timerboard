@@ -5,81 +5,157 @@
 
 @section('content')
     <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Structure Timers</h3>
-            <div class="card-tools">
-                <button type="button" class="btn btn-primary btn-sm" id="create-timer-btn">
-                    <i class="fas fa-plus"></i> Add Timer
-                </button>
-            </div>
+        <div class="card-header p-2">
+            <ul class="nav nav-pills">
+                <li class="nav-item"><a class="nav-link active" href="#current" data-toggle="tab">Current</a></li>
+                <li class="nav-item"><a class="nav-link" href="#elapsed" data-toggle="tab">Elapsed</a></li>
+            </ul>
         </div>
         <div class="card-body">
-
-            <table class="table table-hover table-striped" id="timers-table">
-                <thead>
-                    <tr>
-                        <th>System</th>
-                        <th>Type</th>
-                        <th>Name</th>
-                        <th>Owner</th>
-                        <th>Attacker</th>
-                        <th>Eve Time (UTC)</th>
-                        <th>Local Time</th>
-                        <th>Countdown</th>
-                        <th>Tags</th>
-                        <th>Created By</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($timers as $timer)
-                        <tr class="timer-row" data-time="{{ $timer->eve_time->toIso8601String() }}">
-                            <td>
-                                <a href="https://evemaps.dotlan.net/map/{{ str_replace(' ', '_', $timer->mapDenormalize->region->itemName) }}/{{ str_replace(' ', '_', $timer->mapDenormalize->solarSystemID==null?$timer->mapDenormalize->itemName:$timer->mapDenormalize->system->itemName) }}" target="_blank">
-                                    {{ $timer->system }}
-                                </a>
-                                <br>
-                                <span class="text-muted small">
-                                    {{ $timer->mapDenormalize->region->itemName ?? '' }}
-                                </span>
-                            </td>
-                            <td>{{ $timer->structure_type }}</td>
-                            <td>{{ $timer->structure_name }}</td>
-                            <td>{{ $timer->owner_corporation }}</td>
-                            <td>{{ $timer->attacker_corporation }}</td>
-                            <td>{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
-                            <td class="local-time" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
-                            <td class="countdown font-weight-bold">Calculating...</td>
-                            <td>
-                                @foreach($timer->tags as $tag)
-                                    <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
-                                @endforeach
-                            </td>
-                            <td>{{ $timer->user->name ?? 'Unknown' }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    @can('seat-timerboard.edit')
-                                        <button type="button" class="btn btn-warning edit-timer-btn" title="Edit"
-                                            data-timer='@json($timer)'
-                                            data-tags='@json($timer->tags->pluck("id"))'>
-                                            <i class="fas fa-pencil-alt"></i>
-                                        </button>
-                                    @endcan
-                                    @can('seat-timerboard.delete')
-                                        <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
-                                            {{ csrf_field() }}
-                                            {{ method_field('DELETE') }}
-                                            <button type="submit" class="btn btn-danger" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    @endcan
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+            <div class="tab-content">
+                <div class="tab-pane active" id="current">
+                    <div class="mb-2">
+                        <button type="button" class="btn btn-primary btn-sm" id="create-timer-btn">
+                            <i class="fas fa-plus"></i> Add Timer
+                        </button>
+                    </div>
+                    <table class="table table-hover table-striped timers-table" id="current-timers-table">
+                        <thead>
+                            <tr>
+                                <th>System</th>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Owner</th>
+                                <th>Attacker</th>
+                                <th>Eve Time (UTC)</th>
+                                <th>Local Time</th>
+                                <th>Countdown</th>
+                                <th>Tags</th>
+                                <th>Created By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($currentTimers as $timer)
+                                <tr class="timer-row active-timer" data-time="{{ $timer->eve_time->toIso8601String() }}">
+                                    <td>
+                                        <a href="https://evemaps.dotlan.net/map/{{ str_replace(' ', '_', $timer->mapDenormalize->region->itemName) }}/{{ str_replace(' ', '_', $timer->mapDenormalize->solarSystemID==null?$timer->mapDenormalize->itemName:$timer->mapDenormalize->system->itemName) }}" target="_blank">
+                                            {{ $timer->system }}
+                                        </a>
+                                        <br>
+                                        <span class="text-muted small">
+                                            {{ $timer->mapDenormalize->region->itemName ?? '' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ $timer->structure_type }}</td>
+                                    <td>{{ $timer->structure_name }}</td>
+                                    <td>{{ $timer->owner_corporation }}</td>
+                                    <td>{{ $timer->attacker_corporation }}</td>
+                                    <td>{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
+                                    <td class="local-time" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
+                                    <td class="countdown font-weight-bold">Calculating...</td>
+                                    <td>
+                                        @foreach($timer->tags as $tag)
+                                            <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
+                                        @endforeach
+                                    </td>
+                                    <td>{{ $timer->user->name ?? 'Unknown' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            @can('seat-timerboard.edit')
+                                                <button type="button" class="btn btn-warning edit-timer-btn" title="Edit"
+                                                    data-timer='@json($timer)'
+                                                    data-tags='@json($timer->tags->pluck("id"))'>
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                            @endcan
+                                            @can('seat-timerboard.delete')
+                                                <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
+                                                    {{ csrf_field() }}
+                                                    {{ method_field('DELETE') }}
+                                                    <button type="submit" class="btn btn-danger" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endcan
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <!-- /.tab-pane -->
+                <div class="tab-pane" id="elapsed">
+                    <table class="table table-hover table-striped timers-table" id="elapsed-timers-table">
+                        <thead>
+                            <tr>
+                                <th>System</th>
+                                <th>Type</th>
+                                <th>Name</th>
+                                <th>Owner</th>
+                                <th>Attacker</th>
+                                <th>Eve Time (UTC)</th>
+                                <th>Local Time</th>
+                                <th>Countdown</th>
+                                <th>Tags</th>
+                                <th>Created By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($elapsedTimers as $timer)
+                                <tr class="timer-row static-timer" data-time="{{ $timer->eve_time->toIso8601String() }}">
+                                    <td>
+                                        <a href="https://evemaps.dotlan.net/map/{{ str_replace(' ', '_', $timer->mapDenormalize->region->itemName) }}/{{ str_replace(' ', '_', $timer->mapDenormalize->solarSystemID==null?$timer->mapDenormalize->itemName:$timer->mapDenormalize->system->itemName) }}" target="_blank">
+                                            {{ $timer->system }}
+                                        </a>
+                                        <br>
+                                        <span class="text-muted small">
+                                            {{ $timer->mapDenormalize->region->itemName ?? '' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ $timer->structure_type }}</td>
+                                    <td>{{ $timer->structure_name }}</td>
+                                    <td>{{ $timer->owner_corporation }}</td>
+                                    <td>{{ $timer->attacker_corporation }}</td>
+                                    <td>{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
+                                    <td class="local-time" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
+                                    <td class="countdown font-weight-bold text-danger">ELAPSED</td>
+                                    <td>
+                                        @foreach($timer->tags as $tag)
+                                            <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
+                                        @endforeach
+                                    </td>
+                                    <td>{{ $timer->user->name ?? 'Unknown' }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            @can('seat-timerboard.edit')
+                                                <button type="button" class="btn btn-warning edit-timer-btn" title="Edit"
+                                                    data-timer='@json($timer)'
+                                                    data-tags='@json($timer->tags->pluck("id"))'>
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                            @endcan
+                                            @can('seat-timerboard.delete')
+                                                <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
+                                                    {{ csrf_field() }}
+                                                    {{ method_field('DELETE') }}
+                                                    <button type="submit" class="btn btn-danger" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endcan
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <!-- /.tab-pane -->
+            </div>
+            <!-- /.tab-content -->
         </div>
     </div>
 
@@ -371,13 +447,13 @@
             }
         @endif
 
-        // Existing DataTable and Timer Logic
-        $('#timers-table').DataTable({
+        // Initialize DataTables
+        $('.timers-table').DataTable({
             "order": [[ 5, "asc" ]], // Sort by Eve Time (6th column, index 5)
             "columnDefs": [
-                { "orderable": false, "targets": [8, 10] } // Disable sorting on Tags (9th column, index 8) and Actions (11th column, index 10)
+                { "orderable": false, "targets": [8, 10] } 
             ],
-            "stateSave": true, // Save state (pagination, filtering, sorting)
+            "stateSave": true, 
             "paging": true,
             "pageLength": 25,
             "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ]
@@ -385,14 +461,20 @@
 
         function updateTimers() {
             const now = new Date();
-            const rows = document.querySelectorAll('.timer-row');
+            // Only update active timers (Current tab)
+            // DataTable usually keeps elements in DOM but hides them if paged? 
+            // Actually, for precise countdowns, we should update all found rows in the DOM that are active.
+            // If rows are paginated out by DataTables, they might not be in the DOM depending on DataTables version/config (usually removed).
+            // However, we only care about what the user sees or what's physically there.
+            
+            const rows = document.querySelectorAll('.timer-row.active-timer');
 
             rows.forEach(row => {
                 const timeStr = row.getAttribute('data-time');
                 const eveTime = new Date(timeStr);
                 const diff = eveTime - now;
 
-                // Local Time Update (Once mainly, but keeping it simple)
+                // Local Time Update 
                 const localTimeCell = row.querySelector('.local-time');
                 if (localTimeCell.textContent === 'Calculating...') {
                     localTimeCell.textContent = eveTime.toLocaleString();
@@ -402,7 +484,13 @@
                 const countdownCell = row.querySelector('.countdown');
                 if (diff <= 0) {
                     countdownCell.textContent = 'ELAPSED';
+                    countdownCell.classList.remove('text-warning');
                     countdownCell.classList.add('text-danger');
+                    // Optional: could change class to static-timer to stop updating it, 
+                    // but user wanted it to stay in tab until refresh.
+                    // We can validly stop updating text if we know it says ELAPSED.
+                    row.classList.remove('active-timer');
+                    row.classList.add('static-timer');
                 } else {
                     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -423,6 +511,20 @@
             });
         }
 
+        // Initialize static timers local time (Elapsed tab)
+        function initStaticTimers() {
+             const staticRows = document.querySelectorAll('.timer-row.static-timer');
+             staticRows.forEach(row => {
+                const timeStr = row.getAttribute('data-time');
+                const eveTime = new Date(timeStr);
+                const localTimeCell = row.querySelector('.local-time');
+                if (localTimeCell && localTimeCell.textContent === 'Calculating...') {
+                    localTimeCell.textContent = eveTime.toLocaleString();
+                }
+             });
+        }
+
+        initStaticTimers();
         setInterval(updateTimers, 1000);
         updateTimers();
     });

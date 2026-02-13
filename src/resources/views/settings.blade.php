@@ -9,12 +9,6 @@
             <h3 class="card-title">Manage Tags</h3>
         </div>
         <div class="card-body">
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
-
             <table class="table table-bordered">
                 <thead>
                     <tr>
@@ -57,7 +51,7 @@
                                                     </div>
                                                     <div class="form-group">
                                                         <label for="color">Color</label>
-                                                        <input type="color" class="form-control" name="color" id="color" value="{{ $tag->color }}" required style="width: 50px;">
+                                                        <input type="color" class="form-control" name="color" id="color" value="{{ $tag->color }}" style="width: 50px;" required>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
@@ -85,7 +79,7 @@
                 </div>
                 <div class="form-group mx-sm-3 mb-2">
                     <label for="color" class="sr-only">Color</label>
-                    <input type="color" class="form-control" name="color" id="color" value="#007bff" required>
+                    <input type="color" class="form-control" name="color" id="color" value="#007bff" style="width: 50px;" required>
                 </div>
                 <button type="submit" class="btn btn-primary mb-2">Add Tag</button>
             </form>

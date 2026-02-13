@@ -14,9 +14,21 @@ class TimerboardController extends Controller
 {
     public function index()
     {
-        $timers = Timer::with('tags', 'user', 'mapDenormalize.region', 'mapDenormalize.system')->orderBy('eve_time', 'asc')->get();
+        $now = Carbon::now();
+        $allTimers = Timer::with('tags', 'user', 'mapDenormalize.region', 'mapDenormalize.system')
+            ->orderBy('eve_time', 'asc')
+            ->get();
+
+        $currentTimers = $allTimers->filter(function ($timer) use ($now) {
+            return $timer->eve_time >= $now;
+        });
+
+        $elapsedTimers = $allTimers->filter(function ($timer) use ($now) {
+            return $timer->eve_time < $now;
+        });
+
         $tags = Tag::all();
-        return view('seat-timerboard::index', compact('timers', 'tags'));
+        return view('seat-timerboard::index', compact('currentTimers', 'elapsedTimers', 'tags'));
     }
 
 
