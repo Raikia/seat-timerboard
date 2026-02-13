@@ -9,6 +9,39 @@
             <h3 class="card-title">General Settings</h3>
         </div>
         <div class="card-body">
+            
+            <form action="{{ route('timerboard.settings.notifications') }}" method="POST" class="mb-4">
+                {{ csrf_field() }}
+                
+                <h5 class="mb-3">Notifications</h5>
+                
+                <div class="form-group">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="notification_enabled" name="notification_enabled" {{ $notificationEnabled ? 'checked' : '' }}>
+                        <label class="custom-control-label" for="notification_enabled">Enable Notifications</label>
+                    </div>
+                    <small class="text-muted">Send notifications (Discord/Slack) when a new timer is created.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="notification_role_ids">Filter by Access Role</label>
+                    <select name="notification_role_ids[]" id="notification_role_ids" class="form-control select2" multiple style="width: 100%;">
+                        <option value="public" {{ in_array('public', $notificationRoleIds) ? 'selected' : '' }}>Public (Everyone)</option>
+                        @foreach($roles as $role)
+                            <option value="{{ $role->id }}" {{ in_array((string)$role->id, $notificationRoleIds) ? 'selected' : '' }}>
+                                {{ $role->title }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Only send notifications if the timer is restricted to one of these roles. Select "Public" to include public timers.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm">Save Notification Settings</button>
+            </form>
+
+            <hr>
+
+            <h5 class="mb-3">Defaults</h5>
             <form action="{{ route('timerboard.settings.default-role') }}" method="POST" class="form-inline">
                 {{ csrf_field() }}
                 <div class="form-group mb-2">
@@ -22,9 +55,9 @@
                         @endforeach
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary mb-2">Save</button>
+                <button type="submit" class="btn btn-primary mb-2">Save Default Role</button>
             </form>
-            <small class="text-muted">Timers created will default to this role restricted visibility. If "Public" is selected, timers are visible to everyone by default.</small>
+            <small class="text-muted">Timers created will default to this role restricted visibility.</small>
         </div>
     </div>
 

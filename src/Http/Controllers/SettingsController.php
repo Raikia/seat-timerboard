@@ -15,7 +15,13 @@ class SettingsController extends Controller
         $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
         $defaultRoleId = $defaultRole ? $defaultRole->value : null;
 
-        return view('seat-timerboard::settings', compact('tags', 'roles', 'defaultRoleId'));
+        $notifEnabled = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_enabled');
+        $notificationEnabled = $notifEnabled ? filter_var($notifEnabled->value, FILTER_VALIDATE_BOOLEAN) : false;
+
+        $notifRoles = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_role_ids');
+        $notificationRoleIds = $notifRoles ? json_decode($notifRoles->value, true) : [];
+
+        return view('seat-timerboard::settings', compact('tags', 'roles', 'defaultRoleId', 'notificationEnabled', 'notificationRoleIds'));
     }
 
     public function storeDefaultRole(Request $request)
@@ -30,6 +36,26 @@ class SettingsController extends Controller
         );
 
         return redirect()->route('timerboard.settings')->with('success', 'Default role updated successfully.');
+    }
+
+    public function storeNotifications(Request $request)
+    {
+        $request->validate([
+            'notification_enabled' => 'nullable|in:on,1,true',
+            'notification_role_ids' => 'nullable|array',
+        ]);
+
+        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+            ['setting' => 'notification_enabled'],
+            ['value' => $request->has('notification_enabled')]
+        );
+
+        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+            ['setting' => 'notification_role_ids'],
+            ['value' => json_encode($request->input('notification_role_ids', []))]
+        );
+
+        return redirect()->route('timerboard.settings')->with('success', 'Notification settings updated successfully.');
     }
 
     public function storeTag(Request $request)

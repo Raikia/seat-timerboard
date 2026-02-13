@@ -60,6 +60,10 @@ Route::group([
             'as'   => 'timerboard.settings.tags.update',
             'uses' => 'SettingsController@updateTag',
         ]);
+        Route::post('/notifications', [
+            'as' => 'timerboard.settings.notifications',
+            'uses' => 'SettingsController@storeNotifications',
+        ]);
         Route::delete('/tags/{tag}', [
             'as'   => 'timerboard.settings.tags.destroy',
             'uses' => 'SettingsController@destroyTag',

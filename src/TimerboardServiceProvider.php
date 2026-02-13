@@ -18,6 +18,8 @@ class TimerboardServiceProvider extends AbstractSeatPlugin
         $this->addTranslations();
         $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
         $this->registerPermissions(__DIR__ . '/Config/timerboard.permissions.php', 'seat-timerboard');
+
+        \Raikia\SeatTimerboard\Models\Timer::observe(\Raikia\SeatTimerboard\Observers\TimerObserver::class);
     }
 
     /**
@@ -31,6 +33,9 @@ class TimerboardServiceProvider extends AbstractSeatPlugin
             __DIR__ . '/Config/timerboard.sidebar.php', 'package.sidebar'
         );
 
+        $this->mergeConfigFrom(
+            __DIR__ . '/Config/notifications.alerts.php', 'notifications.alerts'
+        );
     }
 
     /**
