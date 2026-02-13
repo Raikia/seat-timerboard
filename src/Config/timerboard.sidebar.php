@@ -14,6 +14,20 @@ return [
                 'route' => 'timerboard.index',
                 'permission' => 'seat-timerboard.view',
             ],
+            [
+                'name' => 'Create Timer',
+                'label' => 'seat-timerboard::sidebar.create',
+                'icon' => 'fas fa-plus',
+                'route' => 'timerboard.create',
+                'permission' => 'seat-timerboard.create',
+            ],
+            [
+                'name' => 'Settings',
+                'label' => 'seat-timerboard::sidebar.settings',
+                'icon' => 'fas fa-cog',
+                'route' => 'timerboard.settings',
+                'permission' => 'seat-timerboard.settings',
+            ],
         ],
     ],
 ];

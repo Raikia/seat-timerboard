@@ -16,6 +16,7 @@ class TimerboardServiceProvider extends AbstractSeatPlugin
         $this->addRoutes();
         $this->addViews();
         $this->addTranslations();
+        $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
         $this->registerPermissions(__DIR__ . '/Config/timerboard.permissions.php', 'seat-timerboard');
     }
 
