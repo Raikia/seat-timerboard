@@ -4,6 +4,30 @@
 @section('page_header', 'Timerboard Settings')
 
 @section('content')
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="card-title">General Settings</h3>
+        </div>
+        <div class="card-body">
+            <form action="{{ route('timerboard.settings.default-role') }}" method="POST" class="form-inline">
+                {{ csrf_field() }}
+                <div class="form-group mb-2">
+                    <label for="default_timer_role" class="mr-2">Default Access Role:</label>
+                    <select name="default_timer_role" id="default_timer_role" class="form-control mr-2">
+                        <option value="">Public (Everyone)</option>
+                        @foreach($roles as $role)
+                            <option value="{{ $role->id }}" {{ $defaultRoleId == $role->id ? 'selected' : '' }}>
+                                {{ $role->title }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary mb-2">Save</button>
+            </form>
+            <small class="text-muted">Timers created will default to this role restricted visibility. If "Public" is selected, timers are visible to everyone by default.</small>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Manage Tags</h3>

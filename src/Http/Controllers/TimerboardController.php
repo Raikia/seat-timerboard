@@ -15,7 +15,12 @@ class TimerboardController extends Controller
     public function index()
     {
         $now = Carbon::now();
-        $allTimers = Timer::with('tags', 'user', 'mapDenormalize.region', 'mapDenormalize.system')
+        $userRoles = auth()->user()->roles->pluck('id');
+        $allTimers = Timer::with('tags', 'user', 'mapDenormalize.region', 'mapDenormalize.system', 'role')
+            ->where(function ($query) use ($userRoles) {
+                $query->whereNull('role_id')
+                      ->orWhereIn('role_id', $userRoles);
+            })
             ->orderBy('eve_time', 'asc')
             ->get();
 
@@ -28,7 +33,11 @@ class TimerboardController extends Controller
         });
 
         $tags = Tag::orderBy('name')->get();
-        return view('seat-timerboard::index', compact('currentTimers', 'elapsedTimers', 'tags'));
+        $roles = \Seat\Web\Models\Acl\Role::all();
+        $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
+        $defaultRoleId = $defaultRole ? $defaultRole->value : null;
+
+        return view('seat-timerboard::index', compact('currentTimers', 'elapsedTimers', 'tags', 'roles', 'defaultRoleId'));
     }
 
 
@@ -43,6 +52,7 @@ class TimerboardController extends Controller
             'attacker_corporation' => 'nullable|string',
             'time_input' => 'required|string',
             'tags' => 'array',
+            'role_id' => 'nullable|integer|exists:roles,id',
         ]);
 
         $eveTime = $this->parseTimeInput($request->input('time_input'));
@@ -58,6 +68,7 @@ class TimerboardController extends Controller
             'owner_corporation' => $request->input('owner_corporation'),
             'attacker_corporation' => $request->input('attacker_corporation'),
             'user_id' => auth()->id(),
+            'role_id' => $request->input('role_id'),
         ]);
 
         $timer->eve_time = $eveTime;
@@ -219,6 +230,7 @@ class TimerboardController extends Controller
             'attacker_corporation' => 'nullable|string',
             'time_input' => 'required|string',
             'tags' => 'array',
+            'role_id' => 'nullable|integer|exists:roles,id',
         ]);
 
         $eveTime = $this->parseTimeInput($request->input('time_input'));
@@ -233,6 +245,7 @@ class TimerboardController extends Controller
             'structure_name' => $request->input('structure_name'),
             'owner_corporation' => $request->input('owner_corporation'),
             'attacker_corporation' => $request->input('attacker_corporation'),
+            'role_id' => $request->input('role_id'),
         ]);
 
         $timer->eve_time = $eveTime;

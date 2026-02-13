@@ -11,7 +11,25 @@ class SettingsController extends Controller
     public function index()
     {
         $tags = Tag::orderBy('name')->get();
-        return view('seat-timerboard::settings', compact('tags'));
+        $roles = \Seat\Web\Models\Acl\Role::all();
+        $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
+        $defaultRoleId = $defaultRole ? $defaultRole->value : null;
+
+        return view('seat-timerboard::settings', compact('tags', 'roles', 'defaultRoleId'));
+    }
+
+    public function storeDefaultRole(Request $request)
+    {
+        $request->validate([
+            'default_timer_role' => 'nullable|integer', // exists:roles,id might fail if roles table name is different, but assuming standard. Safest is just integer or strict validation if we are sure.
+        ]);
+
+        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+            ['setting' => 'default_timer_role'],
+            ['value' => $request->input('default_timer_role')]
+        );
+
+        return redirect()->route('timerboard.settings')->with('success', 'Default role updated successfully.');
     }
 
     public function storeTag(Request $request)

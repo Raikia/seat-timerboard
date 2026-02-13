@@ -257,6 +257,17 @@
                             </div>
                         </div>
 
+                        <div class="form-group">
+                            <label for="role_id">Access Role</label>
+                            <select name="role_id" class="form-control" id="role_id" style="width: 100%;">
+                                <option value="">Public (Everyone)</option>
+                                @foreach($roles as $role)
+                                    <option value="{{ $role->id }}">{{ $role->title }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Restrict visibility to a specific role.</small>
+                        </div>
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -359,6 +370,9 @@
             // Uncheck all tags and reset visuals
             $('.tag-checkbox').prop('checked', false).trigger('change');
 
+            // Reset Role to default
+            $('#role_id').val('{{ $defaultRoleId }}');
+
             $('#timerModal').modal('show');
         });
         
@@ -420,13 +434,15 @@
                  $('.select2-attacker-corporation').val(null).trigger('change');
             }
 
-            // Tags
             $('.tag-checkbox').prop('checked', false).trigger('change');
             if (tags) {
                 tags.forEach(function(tagId) {
                     $('#tag_' + tagId).prop('checked', true).trigger('change');
                 });
             }
+
+            // Role
+            $('#role_id').val(timer.role_id || '');
 
             $('#timerModal').modal('show');
         });
@@ -460,6 +476,12 @@
                  oldTags.forEach(function(tagId) {
                       $('#tag_' + tagId).prop('checked', true).trigger('change');
                  });
+            }
+
+            // Restore Role
+            var oldRole = '{{ old("role_id") }}';
+            if(oldRole !== '') {
+                $('#role_id').val(oldRole);
             }
         @endif
 

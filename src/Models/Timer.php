@@ -16,8 +16,14 @@ class Timer extends Model
         'owner_corporation',
         'attacker_corporation',
         'eve_time',
-        'user_id'
+        'user_id',
+        'role_id'
     ];
+
+    public function role()
+    {
+        return $this->belongsTo(\Seat\Web\Models\Acl\Role::class, 'role_id');
+    }
 
     protected $dates = ['eve_time'];
 
