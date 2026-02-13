@@ -276,4 +276,11 @@ class TimerboardController extends Controller
 
         return redirect()->route('timerboard.settings')->with('success', 'All elapsed timers deleted successfully.');
     }
+
+    public function truncate()
+    {
+        Timer::query()->delete();
+
+        return redirect()->route('timerboard.settings')->with('success', 'All timers have been deleted.');
+    }
 }

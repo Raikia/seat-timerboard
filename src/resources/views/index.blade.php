@@ -15,9 +15,11 @@
             <div class="tab-content">
                 <div class="tab-pane active" id="current">
                     <div class="mb-2 d-flex justify-content-between align-items-center">
+                        @can('seat-timerboard.create')
                         <button type="button" class="btn btn-primary btn-sm" id="create-timer-btn">
                             <i class="fas fa-plus"></i> Add Timer
                         </button>
+                        @endcan
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i> Timers remain in "Current" for 2 hours after elapsing.
                         </small>

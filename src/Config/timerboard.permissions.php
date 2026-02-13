@@ -21,4 +21,8 @@ return [
         'label' => 'Delete Timers',
         'description' => 'Permission to delete existing timers.',
     ],
+    'delete-all' => [
+        'label' => 'Delete All Timers',
+        'description' => 'Permission to delete ALL timers on the board.',
+    ],
 ];

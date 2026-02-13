@@ -143,6 +143,8 @@
         </div>
     </div>
 
+    </div>
+
     @can('seat-timerboard.delete')
     <div class="card mt-4">
         <div class="card-header">
@@ -154,6 +156,23 @@
                 {{ csrf_field() }}
                 {{ method_field('DELETE') }}
                 <button type="submit" class="btn btn-danger">Delete All Elapsed Timers</button>
+            </form>
+        </div>
+    </div>
+    @endcan
+
+    @can('seat-timerboard.delete-all')
+    <div class="card card-danger mt-4">
+        <div class="card-header">
+            <h3 class="card-title">Danger Zone</h3>
+        </div>
+        <div class="card-body">
+            <p>Delete all timers from the database. This action cannot be undone.</p>
+            <form action="{{ route('timerboard.truncate') }}" method="POST" onsubmit="return confirm('Are you ABSOLUTELY sure? This will delete ALL timers defined in the system.');">
+                {{ csrf_field() }}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Delete All Timers
+                </button>
             </form>
         </div>
     </div>

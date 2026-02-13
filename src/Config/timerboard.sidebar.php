@@ -6,6 +6,7 @@ return [
         'label' => 'seat-timerboard::sidebar.timerboard',
         'icon' => 'fas fa-clock',
         'route_segment' => 'timerboard',
+        'permission' => 'seat-timerboard.view',
         'entries' => [
             [
                 'name' => 'Dashboard',

@@ -10,38 +10,51 @@ Route::group([
         'uses' => 'TimerboardController@index',
     ]);
 
+    // Search routes (accessible with view permission)
+    Route::get('/search/systems', [
+        'as'   => 'timerboard.search.systems',
+        'uses' => 'TimerboardController@searchSystems',
+    ]);
+    Route::get('/search/corporations', [
+        'as'   => 'timerboard.search.corporations',
+        'uses' => 'TimerboardController@searchCorporations',
+    ]);
+
+    // Create route
     Route::group(['middleware' => 'can:seat-timerboard.create'], function () {
         Route::post('/create', [
             'as'   => 'timerboard.store',
             'uses' => 'TimerboardController@store',
         ]);
-        Route::get('/search/systems', [
-            'as'   => 'timerboard.search.systems',
-            'uses' => 'TimerboardController@searchSystems',
-        ]);
-        Route::get('/search/corporations', [
-            'as'   => 'timerboard.search.corporations',
-            'uses' => 'TimerboardController@searchCorporations',
-        ]);
-        Route::group(['middleware' => 'can:seat-timerboard.edit'], function () {
-            Route::put('/{timer}', [
-                'as'   => 'timerboard.update',
-                'uses' => 'TimerboardController@update',
-            ]);
-        });
-
-        Route::group(['middleware' => 'can:seat-timerboard.delete'], function () {
-            Route::delete('/destroy-elapsed', [
-                 'as' => 'timerboard.destroy.elapsed',
-                 'uses' => 'TimerboardController@destroyElapsed',
-            ]);
-            
-            Route::delete('/{timer}', [
-                'as'   => 'timerboard.destroy',
-                'uses' => 'TimerboardController@destroy',
-            ]);
-        });
     });
+
+    // Edit route
+    Route::group(['middleware' => 'can:seat-timerboard.edit'], function () {
+        Route::put('/{timer}', [
+            'as'   => 'timerboard.update',
+            'uses' => 'TimerboardController@update',
+        ]);
+    });
+
+    // Delete routes
+    Route::group(['middleware' => 'can:seat-timerboard.delete'], function () {
+        Route::delete('/destroy-elapsed', [
+                'as' => 'timerboard.destroy.elapsed',
+                'uses' => 'TimerboardController@destroyElapsed',
+        ]);
+        
+        Route::delete('/{timer}', [
+            'as'   => 'timerboard.destroy',
+            'uses' => 'TimerboardController@destroy',
+        ]);
+    });
+
+    // Delete All route
+    Route::post('/truncate', [
+        'as' => 'timerboard.truncate',
+        'uses' => 'TimerboardController@truncate',
+        'middleware' => 'bouncer:seat-timerboard.delete-all',
+    ]);
 
     Route::group(['middleware' => 'can:seat-timerboard.settings', 'prefix' => 'settings'], function () {
         Route::get('/', [
