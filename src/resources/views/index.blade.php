@@ -50,7 +50,10 @@
                                             {{ $timer->mapDenormalize->region->itemName ?? '' }}
                                         </span>
                                     </td>
-                                    <td>{{ $timer->structure_type }}</td>
+                                    <td>
+                                        <img src="{{ $timer->getStructureImage() }}" alt="{{ $timer->structure_type }}" class="img-circle" style="width: 24px; height: 24px; margin-right: 5px;">
+                                        {{ $timer->structure_type }}
+                                    </td>
                                     <td>{{ $timer->structure_name }}</td>
                                     <td>{{ $timer->owner_corporation }}</td>
                                     <td>{{ $timer->attacker_corporation }}</td>
@@ -124,7 +127,10 @@
                                             {{ $timer->mapDenormalize->region->itemName ?? '' }}
                                         </span>
                                     </td>
-                                    <td>{{ $timer->structure_type }}</td>
+                                    <td>
+                                        <img src="{{ $timer->getStructureImage() }}" alt="{{ $timer->structure_type }}" class="img-circle" style="width: 24px; height: 24px; margin-right: 5px;">
+                                        {{ $timer->structure_type }}
+                                    </td>
                                     <td>{{ $timer->structure_name }}</td>
                                     <td>{{ $timer->owner_corporation }}</td>
                                     <td>{{ $timer->attacker_corporation }}</td>

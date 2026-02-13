@@ -26,8 +26,7 @@ class NewTimer extends Notification implements ShouldQueue
 
     public function toDiscord($notifiable)
     {
-        $structureId = $this->getStructureRecallId($this->timer->structure_type);
-        $imageUrl = "https://images.evetech.net/types/{$structureId}/render?size=64";
+        $imageUrl = $this->timer->getStructureImage();
 
         return (new DiscordMessage)
             ->embed(function ($embed) use ($imageUrl) {
@@ -59,28 +58,5 @@ class NewTimer extends Notification implements ShouldQueue
                 $embed->field('Created By', $this->timer->user->name, true);
                 $embed->field('Role Access', $this->timer->role ? $this->timer->role->title : 'Public', true);
             });
-    }
-
-    private function getStructureRecallId($type)
-    {
-        $mapping = [
-            'Ansiblex' => 35841,
-            'Astrahus' => 35832,
-            'Athanor' => 35835,
-            'Azbel' => 35826,
-            'POCO' => 2233,
-            'Fortizar' => 35833,
-            'Keepstar' => 35834,
-            'Metenox' => 81826,
-            'Pharolux' => 35840,
-            'POS' => 16213,
-            'Raitaru' => 35825,
-            'Skyhook' => 81824, // Using Magmatic Skyhook as generic
-            'Sotiyo' => 35827,
-            'Tatara' => 35836,
-            'Tenebrex' => 37534,
-        ];
-
-        return $mapping[$type] ?? 35832; // Default to Astrahus if unknown
     }
 }

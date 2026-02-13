@@ -44,4 +44,29 @@ class Timer extends Model
     {
         return $this->hasOne(\Seat\Eveapi\Models\Sde\MapDenormalize::class, 'itemName', 'system');
     }
+
+    public function getStructureImage()
+    {
+        $mapping = [
+            'Ansiblex' => 35841,
+            'Astrahus' => 35832,
+            'Athanor' => 35835,
+            'Azbel' => 35826,
+            'POCO' => 2233,
+            'Fortizar' => 35833,
+            'Keepstar' => 35834,
+            'Metenox' => 81826,
+            'Pharolux' => 35840,
+            'POS' => 16213,
+            'Raitaru' => 35825,
+            'Skyhook' => 81824, 
+            'Sotiyo' => 35827,
+            'Tatara' => 35836,
+            'Tenebrex' => 37534,
+        ];
+
+        $typeId = $mapping[$this->structure_type] ?? 35832; // Default to Astrahus
+
+        return "https://images.evetech.net/types/{$typeId}/render?size=64";
+    }
 }
