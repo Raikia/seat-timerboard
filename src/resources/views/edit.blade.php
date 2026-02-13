@@ -49,14 +49,14 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="owner_corporation">Owner Corporation</label>
+                    <label for="owner_corporation">Owner</label>
                     <select name="owner_corporation" class="form-control select2-corporation" id="owner_corporation" required style="width: 100%;">
                         <option value="{{ old('owner_corporation', $timer->owner_corporation) }}" selected>{{ old('owner_corporation', $timer->owner_corporation) }}</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="attacker_corporation">Attacker Corporation (Optional)</label>
+                    <label for="attacker_corporation">Attacker (Optional)</label>
                     <select name="attacker_corporation" class="form-control select2-attacker-corporation" id="attacker_corporation" style="width: 100%;">
                          @if(old('attacker_corporation', $timer->attacker_corporation))
                             <option value="{{ old('attacker_corporation', $timer->attacker_corporation) }}" selected>{{ old('attacker_corporation', $timer->attacker_corporation) }}</option>
