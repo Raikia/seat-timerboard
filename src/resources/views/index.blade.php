@@ -34,7 +34,15 @@
                 <tbody>
                     @foreach($timers as $timer)
                         <tr class="timer-row" data-time="{{ $timer->eve_time->toIso8601String() }}">
-                            <td>{{ $timer->system }}</td>
+                            <td>
+                                <a href="https://evemaps.dotlan.net/map/{{ str_replace(' ', '_', $timer->mapDenormalize->region->itemName) }}/{{ str_replace(' ', '_', $timer->mapDenormalize->solarSystemID==null?$timer->mapDenormalize->itemName:$timer->mapDenormalize->system->itemName) }}" target="_blank">
+                                    {{ $timer->system }}
+                                </a>
+                                <br>
+                                <span class="text-muted small">
+                                    {{ $timer->mapDenormalize->region->itemName ?? '' }}
+                                </span>
+                            </td>
                             <td>{{ $timer->structure_type }}</td>
                             <td>{{ $timer->structure_name }}</td>
                             <td>{{ $timer->owner_corporation }}</td>

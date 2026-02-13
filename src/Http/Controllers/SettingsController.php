@@ -26,6 +26,18 @@ class SettingsController extends Controller
         return redirect()->route('timerboard.settings')->with('success', 'Tag created successfully.');
     }
 
+    public function updateTag(Request $request, Tag $tag)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'color' => 'required|string|max:7',
+        ]);
+
+        $tag->update($request->only('name', 'color'));
+
+        return redirect()->route('timerboard.settings')->with('success', 'Tag updated successfully.');
+    }
+
     public function destroyTag(Tag $tag)
     {
         $tag->delete();

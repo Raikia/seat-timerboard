@@ -34,4 +34,8 @@ class Timer extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    public function mapDenormalize()
+    {
+        return $this->hasOne(\Seat\Eveapi\Models\Sde\MapDenormalize::class, 'itemName', 'system');
+    }
 }

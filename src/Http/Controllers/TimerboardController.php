@@ -14,7 +14,7 @@ class TimerboardController extends Controller
 {
     public function index()
     {
-        $timers = Timer::with('tags', 'user')->orderBy('eve_time', 'asc')->get();
+        $timers = Timer::with('tags', 'user', 'mapDenormalize.region')->orderBy('eve_time', 'asc')->get();
         return view('seat-timerboard::index', compact('timers'));
     }
 
