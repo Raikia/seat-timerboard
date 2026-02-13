@@ -14,16 +14,22 @@ class TimerboardSeeder extends Seeder
      */
     public function run()
     {
-        // Hostile (Red - Bootstrap Danger)
-        Tag::firstOrCreate(
-            ['name' => 'Hostile'],
-            ['color' => '#dc3545']
-        );
+        $tags = [
+            ['name' => 'Armor', 'color' => '#f39c12'],       // Orange
+            ['name' => 'Hull', 'color' => '#e74c3c'],        // Red
+            ['name' => 'Final', 'color' => '#8e44ad'],       // Purple
+            ['name' => 'Anchoring', 'color' => '#3498db'],   // Blue
+            ['name' => 'Unanchoring', 'color' => '#95a5a6'], // Gray
+            ['name' => 'Mining', 'color' => '#27ae60'],      // Green
+            ['name' => 'Hostile', 'color' => '#dc3545'],     // Bootstrap Danger
+            ['name' => 'Friendly', 'color' => '#007bff'],    // Bootstrap Primary
+        ];
 
-        // Friendly (Blue - Bootstrap Primary)
-        Tag::firstOrCreate(
-            ['name' => 'Friendly'],
-            ['color' => '#007bff']
-        );
+        foreach ($tags as $tag) {
+            Tag::firstOrCreate(
+                ['name' => $tag['name']],
+                ['color' => $tag['color']]
+            );
+        }
     }
 }
