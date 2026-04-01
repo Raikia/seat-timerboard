@@ -4,6 +4,8 @@ namespace Raikia\SeatTimerboard\Http\Controllers;
 
 use Seat\Web\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\Tag;
 use Carbon\Carbon;
@@ -43,8 +45,9 @@ class TimerboardController extends Controller
         $roles = \Seat\Web\Models\Acl\Role::all();
         $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
         $defaultRoleId = $defaultRole ? $defaultRole->value : null;
+        $structureTypes = $this->getStructureTypes();
 
-        return view('seat-timerboard::index', compact('currentTimers', 'elapsedTimers', 'tags', 'roles', 'defaultRoleId'));
+        return view('seat-timerboard::index', compact('currentTimers', 'elapsedTimers', 'tags', 'roles', 'defaultRoleId', 'structureTypes'));
     }
 
 
@@ -58,7 +61,8 @@ class TimerboardController extends Controller
             'owner_corporation' => 'required|string',
             'attacker_corporation' => 'nullable|string',
             'time_input' => 'required|string',
-            'tags' => 'array',
+            'tags' => 'nullable|array',
+            'tags.*' => 'integer|exists:seat_timerboard_tags,id',
             'role_id' => 'nullable|integer|exists:roles,id',
         ]);
 
@@ -68,24 +72,64 @@ class TimerboardController extends Controller
             return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".'])->withInput();
         }
 
-        $timer = new Timer([
-            'system' => $request->input('system'),
-            'structure_type' => $request->input('structure_type'),
-            'structure_name' => $request->input('structure_name'),
-            'owner_corporation' => $request->input('owner_corporation'),
-            'attacker_corporation' => $request->input('attacker_corporation'),
-            'user_id' => auth()->id(),
-            'role_id' => $request->input('role_id'),
-        ]);
-
-        $timer->eve_time = $eveTime;
-        $timer->save();
-
-        if ($request->has('tags')) {
-            $timer->tags()->sync($request->input('tags'));
-        }
+        $this->persistTimer(new Timer(), $request->only([
+            'system',
+            'structure_type',
+            'structure_name',
+            'owner_corporation',
+            'attacker_corporation',
+            'time_input',
+            'tags',
+            'role_id',
+        ]), $eveTime);
 
         return redirect()->route('timerboard.index')->with('success', 'Timer created successfully.');
+    }
+
+    public function storeMany(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'timers' => 'required|array|min:1',
+            'timers.*.system' => 'required|string',
+            'timers.*.structure_type' => 'required|string',
+            'timers.*.structure_name' => 'nullable|string',
+            'timers.*.owner_corporation' => 'required|string',
+            'timers.*.attacker_corporation' => 'nullable|string',
+            'timers.*.time_input' => 'required|string',
+            'timers.*.tags' => 'nullable|array',
+            'timers.*.tags.*' => 'integer|exists:seat_timerboard_tags,id',
+            'timers.*.role_id' => 'nullable|integer|exists:roles,id',
+        ]);
+
+        $validator->after(function ($validator) use ($request) {
+            foreach ($request->input('timers', []) as $index => $timerData) {
+                $eveTime = $this->parseTimeInput($timerData['time_input'] ?? null);
+
+                if (!$eveTime) {
+                    $validator->errors()->add(
+                        "timers.$index.time_input",
+                        'Timer #' . ($index + 1) . ' has an invalid time format. Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".'
+                    );
+                }
+            }
+        });
+
+        $validated = $validator->validate();
+        $createdCount = 0;
+
+        DB::transaction(function () use ($validated, &$createdCount) {
+            foreach ($validated['timers'] as $timerData) {
+                $eveTime = $this->parseTimeInput($timerData['time_input']);
+                $this->persistTimer(new Timer(), $timerData, $eveTime);
+                $createdCount++;
+            }
+        });
+
+        $message = $createdCount === 1
+            ? '1 timer created successfully.'
+            : $createdCount . ' timers created successfully.';
+
+        return redirect()->route('timerboard.index')->with('success', $message);
     }
 
     private function parseTimeInput($input)
@@ -238,7 +282,8 @@ class TimerboardController extends Controller
             'owner_corporation' => 'required|string',
             'attacker_corporation' => 'nullable|string',
             'time_input' => 'required|string',
-            'tags' => 'array',
+            'tags' => 'nullable|array',
+            'tags.*' => 'integer|exists:seat_timerboard_tags,id',
             'role_id' => 'nullable|integer|exists:roles,id',
         ]);
 
@@ -248,23 +293,16 @@ class TimerboardController extends Controller
             return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".'])->withInput();
         }
 
-        $timer->update([
-            'system' => $request->input('system'),
-            'structure_type' => $request->input('structure_type'),
-            'structure_name' => $request->input('structure_name'),
-            'owner_corporation' => $request->input('owner_corporation'),
-            'attacker_corporation' => $request->input('attacker_corporation'),
-            'role_id' => $request->input('role_id'),
-        ]);
-
-        $timer->eve_time = $eveTime;
-        $timer->save();
-
-        if ($request->has('tags')) {
-            $timer->tags()->sync($request->input('tags'));
-        } else {
-            $timer->tags()->detach();
-        }
+        $this->persistTimer($timer, $request->only([
+            'system',
+            'structure_type',
+            'structure_name',
+            'owner_corporation',
+            'attacker_corporation',
+            'time_input',
+            'tags',
+            'role_id',
+        ]), $eveTime);
 
         return redirect()->route('timerboard.index')->with('success', 'Timer updated successfully.');
     }
@@ -289,5 +327,48 @@ class TimerboardController extends Controller
         Timer::query()->delete();
 
         return redirect()->route('timerboard.settings')->with('success', 'All timers have been deleted.');
+    }
+
+    private function persistTimer(Timer $timer, array $data, Carbon $eveTime): void
+    {
+        $timer->fill([
+            'system' => $data['system'],
+            'structure_type' => $data['structure_type'],
+            'structure_name' => $data['structure_name'] ?? null,
+            'owner_corporation' => $data['owner_corporation'],
+            'attacker_corporation' => $data['attacker_corporation'] ?? null,
+            'role_id' => $data['role_id'] ?? null,
+        ]);
+
+        if (!$timer->exists) {
+            $timer->user_id = auth()->id();
+        }
+
+        $timer->eve_time = $eveTime;
+        $timer->save();
+
+        $timer->tags()->sync($data['tags'] ?? []);
+    }
+
+    private function getStructureTypes(): array
+    {
+        return [
+            'Ansiblex' => 'Ansiblex Jump Gate',
+            'Astrahus' => 'Astrahus',
+            'Athanor' => 'Athanor',
+            'Azbel' => 'Azbel',
+            'POCO' => 'Customs Office',
+            'Fortizar' => 'Fortizar',
+            'Keepstar' => 'Keepstar',
+            'Metenox' => 'Metenox Moon Drill',
+            'Pharolux' => 'Pharolux Cyno Beacon',
+            'POS' => 'POS',
+            'Raitaru' => 'Raitaru',
+            'Skyhook' => 'Skyhook',
+            'Sotiyo' => 'Sotiyo',
+            'Tatara' => 'Tatara',
+            'Tenebrex' => 'Tenebrex Jammer',
+            'Other' => 'Other',
+        ];
     }
 }

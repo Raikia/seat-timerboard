@@ -17,7 +17,7 @@
                     <div class="mb-2 d-flex justify-content-between align-items-center">
                         @can('seat-timerboard.create')
                         <button type="button" class="btn btn-primary btn-sm" id="create-timer-btn">
-                            <i class="fas fa-plus"></i> Add Timer
+                            <i class="fas fa-plus"></i> Add Timers
                         </button>
                         @endcan
                         <small class="text-muted">
@@ -182,85 +182,121 @@
         </div>
     </div>
 
-    <!-- Timer Modal -->
-    <div class="modal fade" id="timerModal" tabindex="-1" role="dialog" aria-labelledby="timerModalLabel" aria-hidden="true">
+    @can('seat-timerboard.create')
+        <div class="modal fade" id="batchTimerModal" tabindex="-1" role="dialog" aria-labelledby="batchTimerModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h5 class="modal-title" id="batchTimerModalLabel">Add Timers</h5>
+                            <small class="text-muted">Queue up as many timers as you need and submit them together.</small>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <form id="batchTimerForm" action="{{ route('timerboard.storeMany') }}" method="POST">
+                        {{ csrf_field() }}
+                        <input type="hidden" name="form_context" value="batch_create">
+
+                        <div class="modal-body">
+                            @if($errors->any() && old('form_context') === 'batch_create')
+                                <div class="alert alert-danger">
+                                    <strong>We couldn't save that batch yet.</strong>
+                                    <ul class="mb-0 mt-2 pl-3">
+                                        @foreach($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                <div class="text-muted mb-2 mb-md-0">
+                                    Each timer keeps its own system, structure, tags, and access role.
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-timer-row-btn">
+                                    <i class="fas fa-plus"></i> Add Another Timer
+                                </button>
+                            </div>
+
+                            <div id="batch-timer-rows"></div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-outline-primary" id="add-timer-row-footer-btn">
+                                <i class="fas fa-plus"></i> Add Another Timer
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="saveBatchTimersBtn">Save Timers</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endcan
+
+    <div class="modal fade" id="editTimerModal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="timerModalLabel">Timer</h5>
+                    <h5 class="modal-title" id="editTimerModalLabel">Edit Timer</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <form id="timerForm" action="" method="POST">
+                <form id="editTimerForm" action="" method="POST">
                     {{ csrf_field() }}
-                    <input type="hidden" name="_method" id="formMethod" value="POST">
-                    <input type="hidden" name="timer_id" id="timer_id" value="">
-                    
+                    <input type="hidden" name="_method" id="editFormMethod" value="PUT">
+                    <input type="hidden" name="timer_id" id="edit_timer_id" value="">
+                    <input type="hidden" name="form_context" value="edit">
+
                     <div class="modal-body">
-                        
+                        @if($errors->any() && old('form_context') === 'edit')
+                            <div class="alert alert-danger">
+                                <strong>We couldn't save those timer changes yet.</strong>
+                                <ul class="mb-0 mt-2 pl-3">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
                         <div class="form-group">
-                            <label for="system">System / Location <span class="text-danger">*</span></label>
-                            <select name="system" class="form-control select2-system" id="system" required style="width: 100%;">
-                                @if(old('system'))
-                                    <option value="{{ old('system') }}" selected>{{ old('system') }}</option>
-                                @endif
-                                <!-- Suggestion via AJAX -->
-                            </select>
+                            <label for="edit_system">System / Location <span class="text-danger">*</span></label>
+                            <select name="system" class="form-control edit-system-select" id="edit_system" required style="width: 100%;"></select>
                             <small class="text-muted">Search for a solar system or celestial (e.g. Moon, Planet)</small>
                         </div>
 
                         <div class="form-group">
-                            <label for="structure_type">Structure Type <span class="text-danger">*</span></label>
-                            <select name="structure_type" class="form-control select2-structure-type" id="structure_type" required style="width: 100%;">
+                            <label for="edit_structure_type">Structure Type <span class="text-danger">*</span></label>
+                            <select name="structure_type" class="form-control edit-structure-type-select" id="edit_structure_type" required style="width: 100%;">
                                 <option value="">Select Type</option>
-                                <option value="Ansiblex">Ansiblex Jump Gate</option>
-                                <option value="Astrahus">Astrahus</option>
-                                <option value="Athanor">Athanor</option>
-                                <option value="Azbel">Azbel</option>
-                                <option value="POCO">Customs Office</option>
-                                <option value="Fortizar">Fortizar</option>
-                                <option value="Keepstar">Keepstar</option>
-                                <option value="Metenox">Metenox Moon Drill</option>                        
-                                <option value="Pharolux">Pharolux Cyno Beacon</option>
-                                <option value="POS">POS</option>
-                                <option value="Raitaru">Raitaru</option>
-                                <option value="Skyhook">Skyhook</option>
-                                <option value="Sotiyo">Sotiyo</option>
-                                <option value="Tatara">Tatara</option>
-                                <option value="Tenebrex">Tenebrex Jammer</option>
-                                <option value="Other">Other</option>
+                                @foreach($structureTypes as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
                             </select>
                         </div>
 
                         <div class="form-group">
-                            <label for="structure_name">Structure Name</label>
-                            <input type="text" name="structure_name" class="form-control" id="structure_name" placeholder="Structure Name" value="{{ old('structure_name') }}">
+                            <label for="edit_structure_name">Structure Name</label>
+                            <input type="text" name="structure_name" class="form-control" id="edit_structure_name" placeholder="Structure Name" value="{{ old('form_context') === 'edit' ? old('structure_name') : '' }}">
                         </div>
 
                         <div class="form-group">
-                            <label for="owner_corporation">Owner <span class="text-danger">*</span></label>
-                            <select name="owner_corporation" class="form-control select2-corporation" id="owner_corporation" required style="width: 100%;">
-                                @if(old('owner_corporation'))
-                                    <option value="{{ old('owner_corporation') }}" selected>{{ old('owner_corporation') }}</option>
-                                @endif
-                                <!-- Suggestion via AJAX -->
-                            </select>
+                            <label for="edit_owner_corporation">Owner <span class="text-danger">*</span></label>
+                            <select name="owner_corporation" class="form-control edit-owner-corporation-select" id="edit_owner_corporation" required style="width: 100%;"></select>
                         </div>
 
                         <div class="form-group">
-                            <label for="attacker_corporation">Attacker (Optional)</label>
-                            <select name="attacker_corporation" class="form-control select2-attacker-corporation" id="attacker_corporation" style="width: 100%;">
-                                @if(old('attacker_corporation'))
-                                    <option value="{{ old('attacker_corporation') }}" selected>{{ old('attacker_corporation') }}</option>
-                                @endif
-                                <!-- Suggestion via AJAX -->
-                            </select>
+                            <label for="edit_attacker_corporation">Attacker (Optional)</label>
+                            <select name="attacker_corporation" class="form-control edit-attacker-corporation-select" id="edit_attacker_corporation" style="width: 100%;"></select>
                         </div>
 
                         <div class="form-group">
-                            <label for="time_input">Time <span class="text-danger">*</span></label>
-                            <input type="text" name="time_input" class="form-control" id="time_input" placeholder="YYYY.MM.DD HH:MM[:SS] or '2 days 4 hours'" value="{{ old('time_input') }}" required>
+                            <label for="edit_time_input">Time <span class="text-danger">*</span></label>
+                            <input type="text" name="time_input" class="form-control" id="edit_time_input" placeholder="YYYY.MM.DD HH:MM[:SS] or '2 days 4 hours'" value="{{ old('form_context') === 'edit' ? old('time_input') : '' }}" required>
                             <small class="form-text text-muted">Enter absolute EVE time (UTC) with optional seconds, or relative time like '1d 4h 30m'.</small>
                         </div>
 
@@ -269,8 +305,8 @@
                             <div class="d-flex flex-wrap">
                                 @foreach($tags as $tag)
                                     <div class="m-1">
-                                        <input type="checkbox" name="tags[]" value="{{ $tag->id }}" id="tag_{{ $tag->id }}" class="d-none tag-checkbox">
-                                        <label class="badge p-2 tag-badge" for="tag_{{ $tag->id }}" 
+                                        <input type="checkbox" name="tags[]" value="{{ $tag->id }}" id="edit_tag_{{ $tag->id }}" class="d-none tag-checkbox">
+                                        <label class="badge p-2 tag-badge" for="edit_tag_{{ $tag->id }}"
                                                style="background-color: {{ $tag->color }}; color: #fff; cursor: pointer; opacity: 0.5; border: 2px solid transparent;"
                                                data-color="{{ $tag->color }}">
                                             {{ $tag->name }}
@@ -281,8 +317,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="role_id">Access Role</label>
-                            <select name="role_id" class="form-control" id="role_id" style="width: 100%;">
+                            <label for="edit_role_id">Access Role</label>
+                            <select name="role_id" class="form-control" id="edit_role_id" style="width: 100%;">
                                 <option value="">Public (Everyone)</option>
                                 @foreach($roles as $role)
                                     <option value="{{ $role->id }}">{{ $role->title }}</option>
@@ -290,7 +326,6 @@
                             </select>
                             <small class="text-muted">Restrict visibility to a specific role.</small>
                         </div>
-
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -302,26 +337,81 @@
     </div>
 @endsection
 
+@php
+    $timerTagOptions = $tags->map(function ($tag) {
+        return [
+            'id' => $tag->id,
+            'name' => $tag->name,
+            'color' => $tag->color,
+        ];
+    })->values();
+
+    $timerRoleOptions = $roles->map(function ($role) {
+        return [
+            'id' => $role->id,
+            'title' => $role->title,
+        ];
+    })->values();
+
+    $batchOldTimers = array_values((array) old('timers', []));
+    $batchHadErrors = $errors->any() && old('form_context') === 'batch_create';
+    $editHadErrors = $errors->any() && old('form_context') === 'edit';
+    $oldEditValues = [
+        'structure_name' => old('form_context') === 'edit' ? old('structure_name') : '',
+        'time_input' => old('form_context') === 'edit' ? old('time_input') : '',
+        'system' => old('form_context') === 'edit' ? old('system') : '',
+        'structure_type' => old('form_context') === 'edit' ? old('structure_type') : '',
+        'owner_corporation' => old('form_context') === 'edit' ? old('owner_corporation') : '',
+        'attacker_corporation' => old('form_context') === 'edit' ? old('attacker_corporation') : '',
+        'role_id' => old('form_context') === 'edit' ? old('role_id') : '',
+        'tags' => old('tags', []),
+    ];
+@endphp
+
+@push('head')
+<style>
+    #batchTimerModal .batch-timer-row .form-group,
+    #editTimerModal .form-group {
+        position: relative;
+    }
+
+    #batchTimerModal .select2-container,
+    #editTimerModal .select2-container {
+        width: 100% !important;
+    }
+
+    #batchTimerModal .select2-dropdown,
+    #editTimerModal .select2-dropdown {
+        z-index: 2055;
+    }
+</style>
+@endpush
+
 @push('javascript')
 <script>
     $(document).ready(function() {
-        
-        // Initialize Select2
-        function initSelect2() {
-            $('.select2-structure-type').select2({
-                theme: 'bootstrap4',
-                dropdownParent: $('#timerModal'),
-                placeholder: 'Select Structure Type',
-                allowClear: true
-            });
+        var structureTypes = @json($structureTypes);
+        var availableTags = @json($timerTagOptions);
+        var availableRoles = @json($timerRoleOptions);
+        var defaultRoleId = @json($defaultRoleId);
+        var batchOldTimers = @json($batchOldTimers);
+        var batchHadErrors = @json($batchHadErrors);
+        var editHadErrors = @json($editHadErrors);
+        var oldEditValues = @json($oldEditValues);
+        var batchRowCounter = 0;
 
-            $('.select2-system').select2({
+        function escapeHtml(value) {
+            return $('<div>').text(value || '').html();
+        }
+
+        function buildAjaxConfig(url, placeholder, allowClear) {
+            return {
                 theme: 'bootstrap4',
-                dropdownParent: $('#timerModal'),
-                placeholder: 'Search for a system or celestial...',
+                placeholder: placeholder,
                 minimumInputLength: 3,
+                allowClear: !!allowClear,
                 ajax: {
-                    url: '{{ route("timerboard.search.systems") }}',
+                    url: url,
                     dataType: 'json',
                     delay: 250,
                     data: function (params) {
@@ -332,77 +422,267 @@
                     },
                     cache: true
                 }
-            });
+            };
+        }
 
-            $('.select2-corporation').select2({
-                theme: 'bootstrap4',
-                dropdownParent: $('#timerModal'),
-                placeholder: 'Search for corporation or alliance...',
-                minimumInputLength: 3,
-                ajax: {
-                    url: '{{ route("timerboard.search.corporations") }}',
-                    dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return { q: params.term };
-                    },
-                    processResults: function (data) {
-                        return { results: data.results };
-                    },
-                    cache: true
-                }
-            });
+        function initStructureTypeSelect($elements, $fallbackParent) {
+            $elements.each(function() {
+                var $element = $(this);
+                var $dropdownParent = $element.closest('.form-group');
 
-             $('.select2-attacker-corporation').select2({
-                theme: 'bootstrap4',
-                dropdownParent: $('#timerModal'),
-                placeholder: 'Search for attacker (corp/alliance)...',
-                minimumInputLength: 3,
-                allowClear: true,
-                ajax: {
-                    url: '{{ route("timerboard.search.corporations") }}',
-                    dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return { q: params.term };
-                    },
-                    processResults: function (data) {
-                        return { results: data.results };
-                    },
-                    cache: true
+                if (!$dropdownParent.length) {
+                    $dropdownParent = $fallbackParent;
                 }
+
+                $element.select2({
+                    theme: 'bootstrap4',
+                    dropdownParent: $dropdownParent,
+                    placeholder: 'Select Structure Type',
+                    allowClear: true,
+                    width: '100%'
+                });
             });
         }
 
-        initSelect2();
+        function initRemoteSelect($elements, $fallbackParent, url, placeholder, allowClear) {
+            $elements.each(function() {
+                var $element = $(this);
+                var $dropdownParent = $element.closest('.form-group');
 
-        // Handle "Add Timer" click
-        $('#create-timer-btn').click(function() {
-            $('#timerModalLabel').text('Add Timer');
-            $('#timerForm').attr('action', '{{ route("timerboard.store") }}');
-            $('#formMethod').val('POST');
-            $('#timerForm')[0].reset();
-            $('#timer_id').val('');
-            
-            // Clear Select2s
-            $('.select2-system').val(null).trigger('change');
-            $('.select2-structure-type').val(null).trigger('change');
-            $('.select2-corporation').val(null).trigger('change');
-            $('.select2-attacker-corporation').val(null).trigger('change');
-            
-            // Uncheck all tags and reset visuals
-            $('.tag-checkbox').prop('checked', false).trigger('change');
+                if (!$dropdownParent.length) {
+                    $dropdownParent = $fallbackParent;
+                }
 
-            // Reset Role to default
-            $('#role_id').val('{{ $defaultRoleId }}');
+                $element.select2($.extend({}, buildAjaxConfig(url, placeholder, allowClear), {
+                    dropdownParent: $dropdownParent,
+                    width: '100%'
+                }));
+            });
+        }
 
-            $('#timerModal').modal('show');
-        });
-        
-        // Tag visual toggle
+        function setSelectValue($select, value) {
+            if (value === null || value === undefined || value === '') {
+                $select.val(null).trigger('change');
+                return;
+            }
+
+            var hasOption = false;
+            $select.find('option').each(function() {
+                if ($(this).val() == value) {
+                    hasOption = true;
+                }
+            });
+
+            if (!hasOption) {
+                $select.append(new Option(value, value, true, true));
+            }
+
+            $select.val(value).trigger('change');
+        }
+
+        function formatUtcTimestamp(timeString) {
+            var date = new Date(timeString);
+
+            return date.getUTCFullYear() + '.' +
+                ('0' + (date.getUTCMonth() + 1)).slice(-2) + '.' +
+                ('0' + date.getUTCDate()).slice(-2) + ' ' +
+                ('0' + date.getUTCHours()).slice(-2) + ':' +
+                ('0' + date.getUTCMinutes()).slice(-2) + ':' +
+                ('0' + date.getUTCSeconds()).slice(-2);
+        }
+
+        function buildStructureTypeOptions(selectedValue) {
+            var options = '<option value="">Select Type</option>';
+
+            $.each(structureTypes, function(value, label) {
+                var selected = String(selectedValue || '') === String(value) ? ' selected' : '';
+                options += '<option value="' + escapeHtml(value) + '"' + selected + '>' + escapeHtml(label) + '</option>';
+            });
+
+            return options;
+        }
+
+        function buildRoleOptions(selectedValue) {
+            var normalizedValue = selectedValue === null || selectedValue === undefined ? '' : String(selectedValue);
+            var options = '<option value="">Public (Everyone)</option>';
+
+            availableRoles.forEach(function(role) {
+                var selected = normalizedValue === String(role.id) ? ' selected' : '';
+                options += '<option value="' + role.id + '"' + selected + '>' + escapeHtml(role.title) + '</option>';
+            });
+
+            return options;
+        }
+
+        function buildTagMarkup(rowKey, selectedTags) {
+            var normalizedTags = (selectedTags || []).map(function(tagId) {
+                return String(tagId);
+            });
+
+            return availableTags.map(function(tag) {
+                var checkboxId = 'batch_tag_' + rowKey + '_' + tag.id;
+                var checked = normalizedTags.indexOf(String(tag.id)) !== -1 ? ' checked' : '';
+
+                return '' +
+                    '<div class="m-1">' +
+                        '<input type="checkbox" name="timers[' + rowKey + '][tags][]" value="' + tag.id + '" id="' + checkboxId + '" class="d-none tag-checkbox"' + checked + '>' +
+                        '<label class="badge p-2 tag-badge" for="' + checkboxId + '" style="background-color: ' + escapeHtml(tag.color) + '; color: #fff; cursor: pointer; opacity: 0.5; border: 2px solid transparent;" data-color="' + escapeHtml(tag.color) + '">' + escapeHtml(tag.name) + '</label>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function buildBatchRow(rowKey, timerData) {
+            var data = timerData || {};
+            var selectedRole = data.role_id !== undefined && data.role_id !== null && data.role_id !== ''
+                ? data.role_id
+                : (defaultRoleId || '');
+
+            return '' +
+                '<div class="card mb-3 batch-timer-row" data-row-key="' + rowKey + '">' +
+                    '<div class="card-header d-flex flex-wrap justify-content-between align-items-center">' +
+                        '<strong class="batch-row-title">Timer</strong>' +
+                        '<button type="button" class="btn btn-outline-danger btn-sm remove-batch-row-btn">' +
+                            '<i class="fas fa-times"></i> Remove' +
+                        '</button>' +
+                    '</div>' +
+                    '<div class="card-body">' +
+                        '<div class="form-row">' +
+                            '<div class="form-group col-lg-6">' +
+                                '<label>System / Location <span class="text-danger">*</span></label>' +
+                                '<select name="timers[' + rowKey + '][system]" class="form-control batch-system-select" required style="width: 100%;"></select>' +
+                                '<small class="text-muted">Search for a solar system or celestial.</small>' +
+                            '</div>' +
+                            '<div class="form-group col-lg-6">' +
+                                '<label>Structure Type <span class="text-danger">*</span></label>' +
+                                '<select name="timers[' + rowKey + '][structure_type]" class="form-control batch-structure-type-select" required style="width: 100%;">' +
+                                    buildStructureTypeOptions(data.structure_type) +
+                                '</select>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="form-row">' +
+                            '<div class="form-group col-lg-6">' +
+                                '<label>Structure Name</label>' +
+                                '<input type="text" name="timers[' + rowKey + '][structure_name]" class="form-control" placeholder="Structure Name" value="' + escapeHtml(data.structure_name) + '">' +
+                            '</div>' +
+                            '<div class="form-group col-lg-6">' +
+                                '<label>Time <span class="text-danger">*</span></label>' +
+                                '<input type="text" name="timers[' + rowKey + '][time_input]" class="form-control" placeholder="YYYY.MM.DD HH:MM[:SS] or 2 days 4 hours" value="' + escapeHtml(data.time_input) + '" required>' +
+                                '<small class="text-muted">Absolute EVE time (UTC) or relative time like 1d 4h 30m.</small>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="form-row">' +
+                            '<div class="form-group col-lg-6">' +
+                                '<label>Owner <span class="text-danger">*</span></label>' +
+                                '<select name="timers[' + rowKey + '][owner_corporation]" class="form-control batch-owner-corporation-select" required style="width: 100%;"></select>' +
+                            '</div>' +
+                            '<div class="form-group col-lg-6">' +
+                                '<label>Attacker (Optional)</label>' +
+                                '<select name="timers[' + rowKey + '][attacker_corporation]" class="form-control batch-attacker-corporation-select" style="width: 100%;"></select>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="form-row">' +
+                            '<div class="form-group col-lg-8">' +
+                                '<label>Tags</label>' +
+                                '<div class="d-flex flex-wrap">' + buildTagMarkup(rowKey, data.tags || []) + '</div>' +
+                            '</div>' +
+                            '<div class="form-group col-lg-4">' +
+                                '<label>Access Role</label>' +
+                                '<select name="timers[' + rowKey + '][role_id]" class="form-control batch-role-select" style="width: 100%;">' +
+                                    buildRoleOptions(selectedRole) +
+                                '</select>' +
+                                '<small class="text-muted">Restrict visibility to a specific role.</small>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        function refreshBatchRowTitles() {
+            $('#batch-timer-rows .batch-timer-row').each(function(index) {
+                $(this).find('.batch-row-title').text('Timer ' + (index + 1));
+            });
+
+            var disableRemove = $('#batch-timer-rows .batch-timer-row').length === 1;
+            $('.remove-batch-row-btn').prop('disabled', disableRemove);
+        }
+
+        function initializeBatchRow($row, timerData) {
+            var data = timerData || {};
+            var $modal = $('#batchTimerModal');
+
+            initStructureTypeSelect($row.find('.batch-structure-type-select'), $modal);
+            initRemoteSelect($row.find('.batch-system-select'), $modal, '{{ route("timerboard.search.systems") }}', 'Search for a system or celestial...', false);
+            initRemoteSelect($row.find('.batch-owner-corporation-select'), $modal, '{{ route("timerboard.search.corporations") }}', 'Search for corporation or alliance...', false);
+            initRemoteSelect($row.find('.batch-attacker-corporation-select'), $modal, '{{ route("timerboard.search.corporations") }}', 'Search for attacker (corp/alliance)...', true);
+
+            setSelectValue($row.find('.batch-system-select'), data.system || '');
+            $row.find('.batch-structure-type-select').val(data.structure_type || null).trigger('change');
+            setSelectValue($row.find('.batch-owner-corporation-select'), data.owner_corporation || '');
+            setSelectValue($row.find('.batch-attacker-corporation-select'), data.attacker_corporation || '');
+            $row.find('.batch-role-select').val(data.role_id !== undefined && data.role_id !== null ? data.role_id : (defaultRoleId || '')).trigger('change');
+            $row.find('.tag-checkbox').trigger('change');
+        }
+
+        function addBatchTimerRow(timerData) {
+            var rowKey = batchRowCounter++;
+            var $row = $(buildBatchRow(rowKey, timerData));
+
+            $('#batch-timer-rows').append($row);
+            initializeBatchRow($row, timerData);
+            refreshBatchRowTitles();
+        }
+
+        function resetBatchRows(timerData) {
+            $('#batch-timer-rows').empty();
+            batchRowCounter = 0;
+
+            var timers = timerData && timerData.length ? timerData : [{}];
+            timers.forEach(function(timer) {
+                addBatchTimerRow(timer);
+            });
+        }
+
+        function resetEditForm() {
+            $('#editTimerForm')[0].reset();
+            $('#editTimerForm').attr('action', '');
+            $('#edit_timer_id').val('');
+            setSelectValue($('#edit_system'), '');
+            $('#edit_structure_type').val(null).trigger('change');
+            setSelectValue($('#edit_owner_corporation'), '');
+            setSelectValue($('#edit_attacker_corporation'), '');
+            $('#edit_role_id').val('').trigger('change');
+            $('#editTimerForm .tag-checkbox').prop('checked', false).trigger('change');
+        }
+
+        initStructureTypeSelect($('#edit_structure_type'), $('#editTimerModal'));
+        initRemoteSelect($('#edit_system'), $('#editTimerModal'), '{{ route("timerboard.search.systems") }}', 'Search for a system or celestial...', false);
+        initRemoteSelect($('#edit_owner_corporation'), $('#editTimerModal'), '{{ route("timerboard.search.corporations") }}', 'Search for corporation or alliance...', false);
+        initRemoteSelect($('#edit_attacker_corporation'), $('#editTimerModal'), '{{ route("timerboard.search.corporations") }}', 'Search for attacker (corp/alliance)...', true);
+
+        @can('seat-timerboard.create')
+            $('#create-timer-btn').click(function() {
+                resetBatchRows([{}]);
+                $('#batchTimerModal').modal('show');
+            });
+
+            $('#add-timer-row-btn, #add-timer-row-footer-btn').click(function() {
+                addBatchTimerRow({});
+            });
+
+            $(document).on('click', '.remove-batch-row-btn', function() {
+                if ($('#batch-timer-rows .batch-timer-row').length === 1) {
+                    return;
+                }
+
+                $(this).closest('.batch-timer-row').remove();
+                refreshBatchRowTitles();
+            });
+        @endcan
+
         $(document).on('change', '.tag-checkbox', function() {
             var label = $('label[for="' + $(this).attr('id') + '"]');
-            if($(this).is(':checked')) {
+
+            if ($(this).is(':checked')) {
                 label.css('opacity', '1');
                 label.css('box-shadow', '0 0 5px rgba(0,0,0,0.5)');
             } else {
@@ -411,102 +691,61 @@
             }
         });
 
-        // Handle "Edit Timer" click
         $('.edit-timer-btn').click(function() {
             var timer = $(this).data('timer');
-            var tags = $(this).data('tags'); // Array of tag IDs
+            var tags = $(this).data('tags') || [];
+            var url = '{{ route("timerboard.update", ":id") }}'.replace(':id', timer.id);
 
-            $('#timerModalLabel').text('Edit Timer');
-            
-            var url = '{{ route("timerboard.update", ":id") }}';
-            url = url.replace(':id', timer.id);
-            
-            $('#timerForm').attr('action', url);
-            $('#formMethod').val('PUT');
-            $('#timer_id').val(timer.id);
+            resetEditForm();
+            $('#editTimerForm').attr('action', url);
+            $('#edit_timer_id').val(timer.id);
+            $('#edit_structure_name').val(timer.structure_name || '');
+            $('#edit_time_input').val(formatUtcTimestamp(timer.eve_time));
+            setSelectValue($('#edit_system'), timer.system || '');
+            $('#edit_structure_type').val(timer.structure_type || null).trigger('change');
+            setSelectValue($('#edit_owner_corporation'), timer.owner_corporation || '');
+            setSelectValue($('#edit_attacker_corporation'), timer.attacker_corporation || '');
+            $('#edit_role_id').val(timer.role_id || '').trigger('change');
 
-            // Populate fields
-            $('#structure_name').val(timer.structure_name);
-            
-            // Format time YYYY.MM.DD HH:MM:SS
-            var date = new Date(timer.eve_time);
-            var formattedTime = date.getUTCFullYear() + "." +
-                                ("0" + (date.getUTCMonth() + 1)).slice(-2) + "." +
-                                ("0" + date.getUTCDate()).slice(-2) + " " +
-                                ("0" + date.getUTCHours()).slice(-2) + ":" +
-                                ("0" + date.getUTCMinutes()).slice(-2) + ":" +
-                                ("0" + date.getUTCSeconds()).slice(-2);
-            $('#time_input').val(formattedTime); 
+            $('#editTimerForm .tag-checkbox').prop('checked', false);
+            tags.forEach(function(tagId) {
+                $('#edit_tag_' + tagId).prop('checked', true);
+            });
+            $('#editTimerForm .tag-checkbox').trigger('change');
 
-            // Populate Select2s (System)
-            var systemOption = new Option(timer.system, timer.system, true, true);
-            $('.select2-system').append(systemOption).trigger('change');
-
-            // Structure Type
-            $('.select2-structure-type').val(timer.structure_type).trigger('change');
-
-            // Owner Corp
-            var ownerOption = new Option(timer.owner_corporation, timer.owner_corporation, true, true);
-            $('.select2-corporation').append(ownerOption).trigger('change');
-
-            // Attacker Corp
-            if (timer.attacker_corporation) {
-                var attackerOption = new Option(timer.attacker_corporation, timer.attacker_corporation, true, true);
-                $('.select2-attacker-corporation').append(attackerOption).trigger('change');
-            } else {
-                 $('.select2-attacker-corporation').val(null).trigger('change');
-            }
-
-            $('.tag-checkbox').prop('checked', false).trigger('change');
-            if (tags) {
-                tags.forEach(function(tagId) {
-                    $('#tag_' + tagId).prop('checked', true).trigger('change');
-                });
-            }
-
-            // Role
-            $('#role_id').val(timer.role_id || '');
-
-            $('#timerModal').modal('show');
+            $('#editTimerModal').modal('show');
         });
 
-        @if($errors->any())
-            $('#timerModal').modal('show');
-            var oldMethod = '{{ old("_method") }}';
-            if (oldMethod === 'PUT') {
-                var timerId = '{{ old("timer_id") }}';
-                var url = '{{ route("timerboard.update", ":id") }}';
-                url = url.replace(':id', timerId);
-                $('#timerForm').attr('action', url);
-                $('#timerModalLabel').text('Edit Timer');
-                $('#formMethod').val('PUT');
-                $('#timer_id').val(timerId); // Restore ID
-            } else {
-                 $('#timerForm').attr('action', '{{ route("timerboard.store") }}');
-                 $('#timerModalLabel').text('Add Timer');
-                 $('#formMethod').val('POST');
-            }
-            
-            // Restore Structure Type Select2
-            var oldType = '{{ old("structure_type") }}';
-            if(oldType) {
-                 $('.select2-structure-type').val(oldType).trigger('change');
-            }
+        if (batchHadErrors) {
+            resetBatchRows(batchOldTimers);
+            $('#batchTimerModal').modal('show');
+        }
 
-            // Restore Tags
-            var oldTags = @json(old('tags', []));
-            if(oldTags && oldTags.length > 0) {
-                 oldTags.forEach(function(tagId) {
-                      $('#tag_' + tagId).prop('checked', true).trigger('change');
-                 });
-            }
+        if (editHadErrors) {
+            var timerId = '{{ old("timer_id") }}';
+            var editUrl = '{{ route("timerboard.update", ":id") }}'.replace(':id', timerId);
 
-            // Restore Role
-            var oldRole = '{{ old("role_id") }}';
-            if(oldRole !== '') {
-                $('#role_id').val(oldRole);
+            resetEditForm();
+            $('#editTimerForm').attr('action', editUrl);
+            $('#edit_timer_id').val(timerId);
+            $('#edit_structure_name').val(oldEditValues.structure_name);
+            $('#edit_time_input').val(oldEditValues.time_input);
+            setSelectValue($('#edit_system'), oldEditValues.system);
+            $('#edit_structure_type').val(oldEditValues.structure_type).trigger('change');
+            setSelectValue($('#edit_owner_corporation'), oldEditValues.owner_corporation);
+            setSelectValue($('#edit_attacker_corporation'), oldEditValues.attacker_corporation);
+            $('#edit_role_id').val(oldEditValues.role_id).trigger('change');
+
+            $('#editTimerForm .tag-checkbox').prop('checked', false);
+            if (oldEditValues.tags && oldEditValues.tags.length) {
+                oldEditValues.tags.forEach(function(tagId) {
+                    $('#edit_tag_' + tagId).prop('checked', true);
+                });
             }
-        @endif
+            $('#editTimerForm .tag-checkbox').trigger('change');
+
+            $('#editTimerModal').modal('show');
+        }
 
         // Initialize DataTables
         $('.timers-table').DataTable({
@@ -588,6 +827,10 @@
         initStaticTimers();
         setInterval(updateTimers, 1000);
         updateTimers();
+
+        if (!batchHadErrors) {
+            $('.tag-checkbox').trigger('change');
+        }
     });
 </script>
 @endpush
