@@ -65,7 +65,7 @@ class TimerboardController extends Controller
         $eveTime = $this->parseTimeInput($request->input('time_input'));
 
         if (!$eveTime) {
-            return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM:SS or "X days Y hours".'])->withInput();
+            return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".'])->withInput();
         }
 
         $timer = new Timer([
@@ -90,11 +90,13 @@ class TimerboardController extends Controller
 
     private function parseTimeInput($input)
     {
-        // Try absolute format "YYYY.MM.DD HH:MM:SS"
-        try {
-            return Carbon::createFromFormat('Y.m.d H:i:s', $input, 'UTC');
-        } catch (\Exception $e) {
-            // Continue to relative parsing
+        // Try absolute formats "YYYY.MM.DD HH:MM" and "YYYY.MM.DD HH:MM:SS"
+        foreach (['Y.m.d H:i:s', 'Y.m.d H:i'] as $format) {
+            try {
+                return Carbon::createFromFormat($format, $input, 'UTC');
+            } catch (\Exception $e) {
+                // Continue to the next format.
+            }
         }
 
         // Try relative format "2 days, 13 minutes"
@@ -243,7 +245,7 @@ class TimerboardController extends Controller
         $eveTime = $this->parseTimeInput($request->input('time_input'));
 
         if (!$eveTime) {
-            return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM:SS or "X days Y hours".'])->withInput();
+            return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".'])->withInput();
         }
 
         $timer->update([

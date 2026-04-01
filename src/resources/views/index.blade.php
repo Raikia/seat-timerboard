@@ -260,8 +260,8 @@
 
                         <div class="form-group">
                             <label for="time_input">Time <span class="text-danger">*</span></label>
-                            <input type="text" name="time_input" class="form-control" id="time_input" placeholder="YYYY.MM.DD HH:MM:SS or '2 days 4 hours'" value="{{ old('time_input') }}" required>
-                            <small class="form-text text-muted">Enter absolute EVE time (UTC) or relative time like '1d 4h 30m'.</small>
+                            <input type="text" name="time_input" class="form-control" id="time_input" placeholder="YYYY.MM.DD HH:MM[:SS] or '2 days 4 hours'" value="{{ old('time_input') }}" required>
+                            <small class="form-text text-muted">Enter absolute EVE time (UTC) with optional seconds, or relative time like '1d 4h 30m'.</small>
                         </div>
 
                         <div class="form-group">
