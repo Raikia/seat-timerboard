@@ -189,7 +189,7 @@
                     <div class="modal-header">
                         <div>
                             <h5 class="modal-title" id="batchTimerModalLabel">Add Timers</h5>
-                            <small class="text-muted">Queue up as many timers as you need and submit them together.</small>
+                            <small class="d-block mt-1" style="opacity: 0.85;">Queue up as many timers as you need and submit them together.</small>
                         </div>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
@@ -211,22 +211,34 @@
                                 </div>
                             @endif
 
-                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-                                <div class="text-muted mb-2 mb-md-0">
-                                    Each timer keeps its own system, structure, tags, and access role.
+                            <div class="batch-modal-toolbar">
+                                <div class="batch-toolbar-meta">
+                                    <div class="batch-count-pill">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span id="batch-timer-count">1 timer</span>
+                                    </div>
+                                    <div class="text-muted">
+                                        Each timer keeps its own system, structure, tags, and access role.
+                                    </div>
                                 </div>
-                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-timer-row-btn">
-                                    <i class="fas fa-plus"></i> Add Another Timer
-                                </button>
+                                <div class="batch-toolbar-actions">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="duplicate-last-row-btn">
+                                        <i class="far fa-clone"></i> Duplicate Last
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="add-timer-row-btn">
+                                        <i class="fas fa-plus"></i> Add Blank Timer
+                                    </button>
+                                </div>
                             </div>
 
                             <div id="batch-timer-rows"></div>
                         </div>
 
                         <div class="modal-footer">
+                            <div class="batch-footer-summary" id="batch-footer-summary">1 timer ready to save</div>
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                             <button type="button" class="btn btn-outline-primary" id="add-timer-row-footer-btn">
-                                <i class="fas fa-plus"></i> Add Another Timer
+                                <i class="fas fa-plus"></i> Add Blank Timer
                             </button>
                             <button type="submit" class="btn btn-primary" id="saveBatchTimersBtn">Save Timers</button>
                         </div>
@@ -373,6 +385,137 @@
     #batchTimerModal .batch-timer-row .form-group,
     #editTimerModal .form-group {
         position: relative;
+    }
+
+    #batchTimerModal .modal-content,
+    #editTimerModal .modal-content {
+        border: 0;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 18px 45px rgba(26, 35, 52, 0.22);
+    }
+
+    #batchTimerModal .modal-header,
+    #editTimerModal .modal-header {
+        border-bottom: 0;
+        background: linear-gradient(135deg, #183247 0%, #214c6c 100%);
+        color: #fff;
+    }
+
+    #batchTimerModal .modal-header .close,
+    #editTimerModal .modal-header .close {
+        color: #fff;
+        opacity: 0.85;
+        text-shadow: none;
+    }
+
+    #batchTimerModal .modal-body {
+        background: linear-gradient(180deg, #f5f7fb 0%, #eef2f7 100%);
+        max-height: 72vh;
+        overflow-y: auto;
+    }
+
+    #editTimerModal .modal-body {
+        background: #f7f9fc;
+    }
+
+    #batchTimerModal .batch-modal-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding: 0.85rem 1rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(33, 76, 108, 0.1);
+        box-shadow: 0 8px 18px rgba(24, 50, 71, 0.06);
+    }
+
+    #batchTimerModal .batch-toolbar-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    #batchTimerModal .batch-count-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: #183247;
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    #batchTimerModal .batch-toolbar-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    #batchTimerModal .batch-timer-row {
+        border: 1px solid rgba(31, 73, 103, 0.12);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 10px 24px rgba(23, 43, 77, 0.08);
+    }
+
+    #batchTimerModal .batch-timer-row + .batch-timer-row {
+        margin-top: 1rem;
+    }
+
+    #batchTimerModal .batch-timer-row .card-header {
+        background: linear-gradient(180deg, #fbfcfe 0%, #f1f5f9 100%);
+        border-bottom: 1px solid rgba(31, 73, 103, 0.08);
+        padding: 0.8rem 1rem;
+    }
+
+    #batchTimerModal .batch-timer-row .card-body {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 1rem 1rem 0.5rem;
+    }
+
+    #batchTimerModal .batch-row-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+
+    #batchTimerModal .batch-row-index {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2rem;
+        height: 2rem;
+        padding: 0 0.55rem;
+        border-radius: 999px;
+        background: #214c6c;
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    #batchTimerModal .batch-row-subtitle {
+        color: #5f6f82;
+        font-size: 0.83rem;
+    }
+
+    #batchTimerModal .batch-row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    #batchTimerModal .batch-footer-summary {
+        margin-right: auto;
+        color: #5f6f82;
+        font-size: 0.9rem;
+        font-weight: 500;
     }
 
     #batchTimerModal .select2-container,
@@ -533,17 +676,28 @@
 
         function buildBatchRow(rowKey, timerData) {
             var data = timerData || {};
-            var selectedRole = data.role_id !== undefined && data.role_id !== null && data.role_id !== ''
+                var selectedRole = data.role_id !== undefined && data.role_id !== null && data.role_id !== ''
                 ? data.role_id
                 : (defaultRoleId || '');
 
             return '' +
                 '<div class="card mb-3 batch-timer-row" data-row-key="' + rowKey + '">' +
                     '<div class="card-header d-flex flex-wrap justify-content-between align-items-center">' +
-                        '<strong class="batch-row-title">Timer</strong>' +
-                        '<button type="button" class="btn btn-outline-danger btn-sm remove-batch-row-btn">' +
-                            '<i class="fas fa-times"></i> Remove' +
-                        '</button>' +
+                        '<div class="batch-row-heading">' +
+                            '<span class="batch-row-index">1</span>' +
+                            '<div>' +
+                                '<strong class="batch-row-title d-block">Timer</strong>' +
+                                '<span class="batch-row-subtitle">Fill this out or duplicate it to build the next timer faster.</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="batch-row-actions">' +
+                            '<button type="button" class="btn btn-outline-secondary btn-sm duplicate-batch-row-btn">' +
+                                '<i class="far fa-clone"></i> Duplicate' +
+                            '</button>' +
+                            '<button type="button" class="btn btn-outline-danger btn-sm remove-batch-row-btn">' +
+                                '<i class="fas fa-times"></i> Remove' +
+                            '</button>' +
+                        '</div>' +
                     '</div>' +
                     '<div class="card-body">' +
                         '<div class="form-row">' +
@@ -598,12 +752,19 @@
         }
 
         function refreshBatchRowTitles() {
+            var rowCount = $('#batch-timer-rows .batch-timer-row').length;
+
             $('#batch-timer-rows .batch-timer-row').each(function(index) {
+                $(this).find('.batch-row-index').text(index + 1);
                 $(this).find('.batch-row-title').text('Timer ' + (index + 1));
             });
 
-            var disableRemove = $('#batch-timer-rows .batch-timer-row').length === 1;
+            var disableRemove = rowCount === 1;
             $('.remove-batch-row-btn').prop('disabled', disableRemove);
+
+            var countLabel = rowCount === 1 ? '1 timer' : rowCount + ' timers';
+            $('#batch-timer-count').text(countLabel);
+            $('#batch-footer-summary').text(rowCount === 1 ? '1 timer ready to save' : rowCount + ' timers ready to save');
         }
 
         function initializeBatchRow($row, timerData) {
@@ -623,13 +784,48 @@
             $row.find('.tag-checkbox').trigger('change');
         }
 
-        function addBatchTimerRow(timerData) {
+        function collectBatchRowData($row) {
+            var tags = [];
+
+            $row.find('.tag-checkbox:checked').each(function() {
+                tags.push($(this).val());
+            });
+
+            return {
+                system: $row.find('.batch-system-select').val() || '',
+                structure_type: $row.find('.batch-structure-type-select').val() || '',
+                structure_name: $row.find('input[name$="[structure_name]"]').val() || '',
+                owner_corporation: $row.find('.batch-owner-corporation-select').val() || '',
+                attacker_corporation: $row.find('.batch-attacker-corporation-select').val() || '',
+                time_input: $row.find('input[name$="[time_input]"]').val() || '',
+                role_id: $row.find('.batch-role-select').val() || '',
+                tags: tags
+            };
+        }
+
+        function focusBatchRow($row) {
+            var $firstInput = $row.find('input[name$="[time_input]"]').first();
+
+            if ($firstInput.length) {
+                $firstInput.trigger('focus');
+            }
+
+            $row[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function addBatchTimerRow(timerData, shouldFocus) {
             var rowKey = batchRowCounter++;
             var $row = $(buildBatchRow(rowKey, timerData));
 
             $('#batch-timer-rows').append($row);
             initializeBatchRow($row, timerData);
             refreshBatchRowTitles();
+
+            if (shouldFocus) {
+                focusBatchRow($row);
+            }
+
+            return $row;
         }
 
         function resetBatchRows(timerData) {
@@ -638,7 +834,7 @@
 
             var timers = timerData && timerData.length ? timerData : [{}];
             timers.forEach(function(timer) {
-                addBatchTimerRow(timer);
+                addBatchTimerRow(timer, false);
             });
         }
 
@@ -666,7 +862,22 @@
             });
 
             $('#add-timer-row-btn, #add-timer-row-footer-btn').click(function() {
-                addBatchTimerRow({});
+                addBatchTimerRow({}, true);
+            });
+
+            $('#duplicate-last-row-btn').click(function() {
+                var $lastRow = $('#batch-timer-rows .batch-timer-row').last();
+
+                if ($lastRow.length) {
+                    addBatchTimerRow(collectBatchRowData($lastRow), true);
+                } else {
+                    addBatchTimerRow({}, true);
+                }
+            });
+
+            $(document).on('click', '.duplicate-batch-row-btn', function() {
+                var $row = $(this).closest('.batch-timer-row');
+                addBatchTimerRow(collectBatchRowData($row), true);
             });
 
             $(document).on('click', '.remove-batch-row-btn', function() {
