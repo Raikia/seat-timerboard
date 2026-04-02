@@ -4,6 +4,7 @@ namespace Raikia\SeatTimerboard\Http\Controllers;
 
 use Seat\Web\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Raikia\SeatTimerboard\Models\Timer;
@@ -54,34 +55,15 @@ class TimerboardController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'system' => 'required|string',
-            'structure_type' => 'required|string',
-            'structure_name' => 'nullable|string',
-            'owner_corporation' => 'required|string',
-            'attacker_corporation' => 'nullable|string',
-            'time_input' => 'required|string',
-            'tags' => 'nullable|array',
-            'tags.*' => 'integer|exists:seat_timerboard_tags,id',
-            'role_id' => 'nullable|integer|exists:roles,id',
-        ]);
+        $request->validate($this->timerRules());
 
         $eveTime = $this->parseTimeInput($request->input('time_input'));
 
         if (!$eveTime) {
-            return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".'])->withInput();
+            return $this->invalidTimeRedirect();
         }
 
-        $this->persistTimer(new Timer(), $request->only([
-            'system',
-            'structure_type',
-            'structure_name',
-            'owner_corporation',
-            'attacker_corporation',
-            'time_input',
-            'tags',
-            'role_id',
-        ]), $eveTime);
+        $this->persistTimer(new Timer(), $this->extractTimerData($request->all()), $eveTime);
 
         return redirect()->route('timerboard.index')->with('success', 'Timer created successfully.');
     }
@@ -90,16 +72,7 @@ class TimerboardController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'timers' => 'required|array|min:1',
-            'timers.*.system' => 'required|string',
-            'timers.*.structure_type' => 'required|string',
-            'timers.*.structure_name' => 'nullable|string',
-            'timers.*.owner_corporation' => 'required|string',
-            'timers.*.attacker_corporation' => 'nullable|string',
-            'timers.*.time_input' => 'required|string',
-            'timers.*.tags' => 'nullable|array',
-            'timers.*.tags.*' => 'integer|exists:seat_timerboard_tags,id',
-            'timers.*.role_id' => 'nullable|integer|exists:roles,id',
-        ]);
+        ] + $this->timerRules('timers.*.'));
 
         $validator->after(function ($validator) use ($request) {
             foreach ($request->input('timers', []) as $index => $timerData) {
@@ -108,7 +81,7 @@ class TimerboardController extends Controller
                 if (!$eveTime) {
                     $validator->errors()->add(
                         "timers.$index.time_input",
-                        'Timer #' . ($index + 1) . ' has an invalid time format. Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".'
+                        $this->timeInputErrorMessage($index + 1)
                     );
                 }
             }
@@ -196,37 +169,27 @@ class TimerboardController extends Controller
 
     public function searchSystems(Request $request)
     {
-        $query = $request->input('q');
+        $query = trim((string) $request->input('q', ''));
 
         if (strlen($query) < 3) {
-            return response()->json([]);
+            return response()->json(['results' => []]);
         }
 
+        $escapedQuery = $this->escapeLike($query);
+
         // groupIDs: 5 = Solar System, 7 = Planet, 8 = Moon
-        $results = \Seat\Eveapi\Models\Sde\MapDenormalize::where('itemName', 'like', "%$query%")
+        $results = \Seat\Eveapi\Models\Sde\MapDenormalize::where('itemName', 'like', '%' . $escapedQuery . '%')
             ->whereIn('groupID', [5, 7, 8])
             ->select('itemID', 'itemName', 'typeID', 'solarSystemID', 'groupID')
-            ->with('type')
+            ->orderByRaw('CASE WHEN itemName LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
+            ->orderBy('itemName')
             ->limit(20)
             ->get();
 
         $formatted = $results->map(function ($item) {
-            $type = $item->type ? $item->type->typeName : 'Unknown';
-            $system = $item->solarSystem ? $item->solarSystem->solarSystemName : '';
-            
-            $text = $item->itemName;
-            if ($item->groupID != 5) { // Not a Solar System
-                $text .= " ($type)";
-                if ($system && $system !== $item->itemName) {
-                     $text .= " - $system";
-                }
-            } else {
-                $text .= " (System)";
-            }
-
             return [
                 'id' => $item->itemName,
-                'text' => $text
+                'text' => $item->itemName,
             ];
         });
 
@@ -235,7 +198,7 @@ class TimerboardController extends Controller
 
     public function searchCorporations(Request $request)
     {
-        $query = $request->input('q');
+        $query = trim((string) $request->input('q', ''));
 
         if (strlen($query) < 3) {
              return response()->json(['results' => []]);
@@ -254,38 +217,57 @@ class TimerboardController extends Controller
                  return response()->json(['results' => []]);
             }
 
-            $esiClient = new EseyeClient();
-            $esiClient->setAuthentication($refreshToken);
-            $searchResponse = $esiClient->setQueryString([
-                'categories' => ['corporation', 'alliance'],
-                'search' => $query,
-            ])->invoke('get', '/characters/{character_id}/search/', [
-                'character_id' => $characterId,
-            ]);
+            $searchCacheKey = sprintf(
+                'seat_timerboard:entity_search:v1:%s:%s',
+                $characterId,
+                sha1(strtolower($query))
+            );
 
-            $ids = [];
-            if (isset($searchResponse->getBody()->corporation)) {
-                $ids = array_merge($ids, $searchResponse->getBody()->corporation);
-            }
-            if (isset($searchResponse->getBody()->alliance)) {
-                $ids = array_merge($ids, $searchResponse->getBody()->alliance);
-            }
+            $formatted = Cache::remember($searchCacheKey, now()->addSeconds(90), function () use ($characterId, $query, $refreshToken) {
+                $esiClient = new EseyeClient();
+                $esiClient->setAuthentication($refreshToken);
 
-            if (empty($ids)) {
-                return response()->json(['results' => []]);
-            }
+                $searchResponse = $esiClient->setQueryString([
+                    'categories' => ['corporation', 'alliance'],
+                    'search' => $query,
+                ])->invoke('get', '/characters/{character_id}/search/', [
+                    'character_id' => $characterId,
+                ]);
 
-            // Limit to 20 results total
-            $ids = array_slice($ids, 0, 20);
+                $ids = [];
+                if (isset($searchResponse->getBody()->corporation)) {
+                    $ids = array_merge($ids, $searchResponse->getBody()->corporation);
+                }
+                if (isset($searchResponse->getBody()->alliance)) {
+                    $ids = array_merge($ids, $searchResponse->getBody()->alliance);
+                }
 
-            // Resolve IDs to Names (Public endpoint)
-            $namesResponse = $esiClient->setBody($ids)->invoke('post', '/universe/names/');
+                if (empty($ids)) {
+                    return [];
+                }
 
-            $formatted = collect($namesResponse->getBody())->map(function ($item) {
-                return [
-                    'id' => $item->name,
-                    'text' => $item->name . ' (' . ucfirst($item->category) . ')'
-                ];
+                $ids = array_values(array_unique($ids));
+                $ids = array_slice($ids, 0, 100);
+
+                return collect($this->resolveUniverseNames($esiClient, $ids))
+                    ->map(function ($item) {
+                        return [
+                            'id' => $item['name'],
+                            'text' => $item['name'] . ' (' . ucfirst($item['category']) . ')',
+                            'name' => $item['name'],
+                        ];
+                    })
+                    ->sort(function ($left, $right) use ($query) {
+                        return $this->compareSearchLabels($left['name'], $right['name'], $query);
+                    })
+                    ->take(20)
+                    ->values()
+                    ->map(function ($item) {
+                        unset($item['name']);
+
+                        return $item;
+                    })
+                    ->all();
             });
 
             return response()->json(['results' => $formatted]);
@@ -302,34 +284,15 @@ class TimerboardController extends Controller
     {
         $timer = Timer::findOrFail($id);
 
-        $request->validate([
-            'system' => 'required|string',
-            'structure_type' => 'required|string',
-            'structure_name' => 'nullable|string',
-            'owner_corporation' => 'required|string',
-            'attacker_corporation' => 'nullable|string',
-            'time_input' => 'required|string',
-            'tags' => 'nullable|array',
-            'tags.*' => 'integer|exists:seat_timerboard_tags,id',
-            'role_id' => 'nullable|integer|exists:roles,id',
-        ]);
+        $request->validate($this->timerRules());
 
         $eveTime = $this->parseTimeInput($request->input('time_input'));
 
         if (!$eveTime) {
-            return redirect()->back()->withErrors(['time_input' => 'Invalid time format. Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".'])->withInput();
+            return $this->invalidTimeRedirect();
         }
 
-        $this->persistTimer($timer, $request->only([
-            'system',
-            'structure_type',
-            'structure_name',
-            'owner_corporation',
-            'attacker_corporation',
-            'time_input',
-            'tags',
-            'role_id',
-        ]), $eveTime);
+        $this->persistTimer($timer, $this->extractTimerData($request->all()), $eveTime);
 
         return redirect()->route('timerboard.index')->with('success', 'Timer updated successfully.');
     }
@@ -377,6 +340,49 @@ class TimerboardController extends Controller
         $timer->tags()->sync($data['tags'] ?? []);
     }
 
+    private function timerRules(string $prefix = ''): array
+    {
+        return [
+            $prefix . 'system' => 'required|string',
+            $prefix . 'structure_type' => 'required|string',
+            $prefix . 'structure_name' => 'nullable|string',
+            $prefix . 'owner_corporation' => 'required|string',
+            $prefix . 'attacker_corporation' => 'nullable|string',
+            $prefix . 'time_input' => 'required|string',
+            $prefix . 'tags' => 'nullable|array',
+            $prefix . 'tags.*' => 'integer|exists:seat_timerboard_tags,id',
+            $prefix . 'role_id' => 'nullable|integer|exists:roles,id',
+        ];
+    }
+
+    private function extractTimerData(array $data): array
+    {
+        return [
+            'system' => $data['system'],
+            'structure_type' => $data['structure_type'],
+            'structure_name' => $data['structure_name'] ?? null,
+            'owner_corporation' => $data['owner_corporation'],
+            'attacker_corporation' => $data['attacker_corporation'] ?? null,
+            'time_input' => $data['time_input'],
+            'tags' => $data['tags'] ?? [],
+            'role_id' => $data['role_id'] ?? null,
+        ];
+    }
+
+    private function invalidTimeRedirect(string $field = 'time_input', ?int $timerNumber = null)
+    {
+        return redirect()->back()->withErrors([
+            $field => $this->timeInputErrorMessage($timerNumber),
+        ])->withInput();
+    }
+
+    private function timeInputErrorMessage(?int $timerNumber = null): string
+    {
+        $prefix = $timerNumber ? 'Timer #' . $timerNumber . ' has an invalid time format.' : 'Invalid time format.';
+
+        return $prefix . ' Use YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS, or "X days Y hours".';
+    }
+
     private function getStructureTypes(): array
     {
         return [
@@ -397,5 +403,57 @@ class TimerboardController extends Controller
             'Tenebrex' => 'Tenebrex Jammer',
             'Other' => 'Other',
         ];
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+    }
+
+    private function resolveUniverseNames(EseyeClient $esiClient, array $ids): array
+    {
+        sort($ids);
+
+        $cacheKey = 'seat_timerboard:universe_names:v1:' . sha1(implode(',', $ids));
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($esiClient, $ids) {
+            $namesResponse = $esiClient->setBody($ids)->invoke('post', '/universe/names/');
+
+            return collect($namesResponse->getBody())->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'category' => $item->category,
+                ];
+            })->all();
+        });
+    }
+
+    private function compareSearchLabels(string $left, string $right, string $query): int
+    {
+        $leftScore = $this->searchMatchScore($left, $query);
+        $rightScore = $this->searchMatchScore($right, $query);
+
+        if ($leftScore !== $rightScore) {
+            return $leftScore <=> $rightScore;
+        }
+
+        return strcasecmp($left, $right);
+    }
+
+    private function searchMatchScore(string $value, string $query): int
+    {
+        $value = strtolower($value);
+        $query = strtolower($query);
+
+        if ($value === $query) {
+            return 0;
+        }
+
+        if (strpos($value, $query) === 0) {
+            return 1;
+        }
+
+        return 2;
     }
 }

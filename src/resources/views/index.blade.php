@@ -254,6 +254,81 @@
                 </div>
             </div>
         </div>
+
+        <script type="text/template" id="batch-timer-row-template">
+            <div class="card mb-3 batch-timer-row" data-row-key="__ROW_KEY__">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center">
+                    <div class="batch-row-heading" role="button" tabindex="0" aria-expanded="true">
+                        <span class="batch-row-index">1</span>
+                        <div class="batch-row-title-wrap">
+                            <strong class="batch-row-title d-block">Timer</strong>
+                            <span class="batch-row-subtitle">Fill this out or duplicate it to build the next timer faster.</span>
+                            <div class="batch-row-summary"></div>
+                        </div>
+                    </div>
+                    <div class="batch-row-actions">
+                        <button type="button" class="btn btn-light btn-sm toggle-batch-row-btn" title="Collapse or expand timer">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm duplicate-batch-row-btn">
+                            <i class="far fa-clone"></i> Duplicate
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-batch-row-btn">
+                            <i class="fas fa-times"></i> Remove
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group col-lg-6">
+                            <label>System / Location <span class="text-danger">*</span></label>
+                            <select name="timers[__ROW_KEY__][system]" class="form-control batch-system-select" required style="width: 100%;"></select>
+                            <small class="text-muted">Search for a solar system or celestial.</small>
+                        </div>
+                        <div class="form-group col-lg-6">
+                            <label>Structure Type <span class="text-danger">*</span></label>
+                            <select name="timers[__ROW_KEY__][structure_type]" class="form-control batch-structure-type-select" required style="width: 100%;">
+                                __STRUCTURE_TYPE_OPTIONS__
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-lg-6">
+                            <label>Structure Name</label>
+                            <input type="text" name="timers[__ROW_KEY__][structure_name]" class="form-control" placeholder="Structure Name" value="__STRUCTURE_NAME__">
+                        </div>
+                        <div class="form-group col-lg-6">
+                            <label>Time <span class="text-danger">*</span></label>
+                            <input type="text" name="timers[__ROW_KEY__][time_input]" class="form-control" placeholder="YYYY.MM.DD HH:MM[:SS] or 2 days 4 hours" value="__TIME_INPUT__" required>
+                            <small class="text-muted">Absolute EVE time (UTC) or relative time like 1d 4h 30m.</small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-lg-6">
+                            <label>Owner <span class="text-danger">*</span></label>
+                            <select name="timers[__ROW_KEY__][owner_corporation]" class="form-control batch-owner-corporation-select" required style="width: 100%;"></select>
+                        </div>
+                        <div class="form-group col-lg-6">
+                            <label>Attacker (Optional)</label>
+                            <select name="timers[__ROW_KEY__][attacker_corporation]" class="form-control batch-attacker-corporation-select" style="width: 100%;"></select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-lg-8">
+                            <label>Tags</label>
+                            <div class="d-flex flex-wrap">__TAG_MARKUP__</div>
+                        </div>
+                        <div class="form-group col-lg-4">
+                            <label>Access Role</label>
+                            <select name="timers[__ROW_KEY__][role_id]" class="form-control batch-role-select" style="width: 100%;">
+                                __ROLE_OPTIONS__
+                            </select>
+                            <small class="text-muted">Restrict visibility to a specific role.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </script>
     @endcan
 
     <div class="modal fade" id="editTimerModal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel" aria-hidden="true">
@@ -712,7 +787,17 @@
             return $('<div>').text(value || '').html();
         }
 
-        function buildAjaxConfig(url, placeholder, allowClear) {
+        function abortSelectRequest($element) {
+            var activeRequest = $element.data('select2ActiveRequest');
+
+            if (activeRequest && activeRequest.readyState !== 4) {
+                activeRequest.abort();
+            }
+
+            $element.removeData('select2ActiveRequest');
+        }
+
+        function buildAjaxConfig($element, url, placeholder, allowClear) {
             return {
                 theme: 'bootstrap4',
                 placeholder: placeholder,
@@ -721,9 +806,32 @@
                 ajax: {
                     url: url,
                     dataType: 'json',
-                    delay: 250,
+                    delay: 150,
                     data: function (params) {
                         return { q: params.term };
+                    },
+                    transport: function (params, success, failure) {
+                        abortSelectRequest($element);
+
+                        var request = $.ajax(params);
+
+                        $element.data('select2ActiveRequest', request);
+
+                        request.then(success);
+                        request.fail(function(jqXHR, textStatus, errorThrown) {
+                            if (textStatus === 'abort') {
+                                return;
+                            }
+
+                            failure(jqXHR, textStatus, errorThrown);
+                        });
+                        request.always(function() {
+                            if ($element.data('select2ActiveRequest') === request) {
+                                $element.removeData('select2ActiveRequest');
+                            }
+                        });
+
+                        return request;
                     },
                     processResults: function (data) {
                         return { results: data.results };
@@ -751,10 +859,14 @@
             $elements.each(function() {
                 var $element = $(this);
 
-                $element.select2($.extend({}, buildAjaxConfig(url, placeholder, allowClear), {
+                $element.select2($.extend({}, buildAjaxConfig($element, url, placeholder, allowClear), {
                     dropdownParent: $fallbackParent,
                     width: '100%'
                 }));
+
+                $element.on('select2:close.select2Abort select2:closing.select2Abort', function() {
+                    abortSelectRequest($element);
+                });
             });
         }
 
@@ -860,80 +972,15 @@
             var selectedRole = data.role_id !== undefined && data.role_id !== null && data.role_id !== ''
                 ? data.role_id
                 : (defaultRoleId || '');
+            var template = $('#batch-timer-row-template').html();
 
-            return '' +
-                '<div class="card mb-3 batch-timer-row" data-row-key="' + rowKey + '">' +
-                    '<div class="card-header d-flex flex-wrap justify-content-between align-items-center">' +
-                        '<div class="batch-row-heading" role="button" tabindex="0" aria-expanded="true">' +
-                            '<span class="batch-row-index">1</span>' +
-                            '<div class="batch-row-title-wrap">' +
-                                '<strong class="batch-row-title d-block">Timer</strong>' +
-                                '<span class="batch-row-subtitle">Fill this out or duplicate it to build the next timer faster.</span>' +
-                                '<div class="batch-row-summary"></div>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="batch-row-actions">' +
-                            '<button type="button" class="btn btn-light btn-sm toggle-batch-row-btn" title="Collapse or expand timer">' +
-                                '<i class="fas fa-chevron-down"></i>' +
-                            '</button>' +
-                            '<button type="button" class="btn btn-outline-secondary btn-sm duplicate-batch-row-btn">' +
-                                '<i class="far fa-clone"></i> Duplicate' +
-                            '</button>' +
-                            '<button type="button" class="btn btn-outline-danger btn-sm remove-batch-row-btn">' +
-                                '<i class="fas fa-times"></i> Remove' +
-                            '</button>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="card-body">' +
-                        '<div class="form-row">' +
-                            '<div class="form-group col-lg-6">' +
-                                '<label>System / Location <span class="text-danger">*</span></label>' +
-                                '<select name="timers[' + rowKey + '][system]" class="form-control batch-system-select" required style="width: 100%;"></select>' +
-                                '<small class="text-muted">Search for a solar system or celestial.</small>' +
-                            '</div>' +
-                            '<div class="form-group col-lg-6">' +
-                                '<label>Structure Type <span class="text-danger">*</span></label>' +
-                                '<select name="timers[' + rowKey + '][structure_type]" class="form-control batch-structure-type-select" required style="width: 100%;">' +
-                                    buildStructureTypeOptions(data.structure_type) +
-                                '</select>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="form-row">' +
-                            '<div class="form-group col-lg-6">' +
-                                '<label>Structure Name</label>' +
-                                '<input type="text" name="timers[' + rowKey + '][structure_name]" class="form-control" placeholder="Structure Name" value="' + escapeHtml(data.structure_name) + '">' +
-                            '</div>' +
-                            '<div class="form-group col-lg-6">' +
-                                '<label>Time <span class="text-danger">*</span></label>' +
-                                '<input type="text" name="timers[' + rowKey + '][time_input]" class="form-control" placeholder="YYYY.MM.DD HH:MM[:SS] or 2 days 4 hours" value="' + escapeHtml(data.time_input) + '" required>' +
-                                '<small class="text-muted">Absolute EVE time (UTC) or relative time like 1d 4h 30m.</small>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="form-row">' +
-                            '<div class="form-group col-lg-6">' +
-                                '<label>Owner <span class="text-danger">*</span></label>' +
-                                '<select name="timers[' + rowKey + '][owner_corporation]" class="form-control batch-owner-corporation-select" required style="width: 100%;"></select>' +
-                            '</div>' +
-                            '<div class="form-group col-lg-6">' +
-                                '<label>Attacker (Optional)</label>' +
-                                '<select name="timers[' + rowKey + '][attacker_corporation]" class="form-control batch-attacker-corporation-select" style="width: 100%;"></select>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="form-row">' +
-                            '<div class="form-group col-lg-8">' +
-                                '<label>Tags</label>' +
-                                '<div class="d-flex flex-wrap">' + buildTagMarkup(rowKey, data.tags || []) + '</div>' +
-                            '</div>' +
-                            '<div class="form-group col-lg-4">' +
-                                '<label>Access Role</label>' +
-                                '<select name="timers[' + rowKey + '][role_id]" class="form-control batch-role-select" style="width: 100%;">' +
-                                    buildRoleOptions(selectedRole) +
-                                '</select>' +
-                                '<small class="text-muted">Restrict visibility to a specific role.</small>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>';
+            return template
+                .replace(/__ROW_KEY__/g, String(rowKey))
+                .replace('__STRUCTURE_TYPE_OPTIONS__', buildStructureTypeOptions(data.structure_type))
+                .replace('__STRUCTURE_NAME__', escapeHtml(data.structure_name))
+                .replace('__TIME_INPUT__', escapeHtml(data.time_input))
+                .replace('__TAG_MARKUP__', buildTagMarkup(rowKey, data.tags || []))
+                .replace('__ROLE_OPTIONS__', buildRoleOptions(selectedRole));
         }
 
         function refreshBatchRowTitles() {
