@@ -391,7 +391,7 @@
     #editTimerModal .modal-content {
         border: 0;
         border-radius: 14px;
-        overflow: hidden;
+        overflow: visible;
         box-shadow: 0 18px 45px rgba(26, 35, 52, 0.22);
     }
 
@@ -461,7 +461,7 @@
     #batchTimerModal .batch-timer-row {
         border: 1px solid rgba(31, 73, 103, 0.12);
         border-radius: 14px;
-        overflow: hidden;
+        overflow: visible;
         box-shadow: 0 10px 24px rgba(23, 43, 77, 0.08);
     }
 
@@ -542,6 +542,7 @@
         var editHadErrors = @json($editHadErrors);
         var oldEditValues = @json($oldEditValues);
         var batchRowCounter = 0;
+        var activeSelect2Instance = null;
 
         function escapeHtml(value) {
             return $('<div>').text(value || '').html();
@@ -571,15 +572,10 @@
         function initStructureTypeSelect($elements, $fallbackParent) {
             $elements.each(function() {
                 var $element = $(this);
-                var $dropdownParent = $element.closest('.form-group');
-
-                if (!$dropdownParent.length) {
-                    $dropdownParent = $fallbackParent;
-                }
 
                 $element.select2({
                     theme: 'bootstrap4',
-                    dropdownParent: $dropdownParent,
+                    dropdownParent: $fallbackParent,
                     placeholder: 'Select Structure Type',
                     allowClear: true,
                     width: '100%'
@@ -590,16 +586,37 @@
         function initRemoteSelect($elements, $fallbackParent, url, placeholder, allowClear) {
             $elements.each(function() {
                 var $element = $(this);
-                var $dropdownParent = $element.closest('.form-group');
-
-                if (!$dropdownParent.length) {
-                    $dropdownParent = $fallbackParent;
-                }
 
                 $element.select2($.extend({}, buildAjaxConfig(url, placeholder, allowClear), {
-                    dropdownParent: $dropdownParent,
+                    dropdownParent: $fallbackParent,
                     width: '100%'
                 }));
+            });
+        }
+
+        function repositionSelect2Dropdown(instance) {
+            if (!instance || !instance.$dropdown || !instance.$container) {
+                return;
+            }
+
+            var dropdownParent = instance.options.get('dropdownParent');
+            var $dropdownParent = dropdownParent && dropdownParent.jquery ? dropdownParent : $(dropdownParent);
+
+            if (!$dropdownParent.length) {
+                return;
+            }
+
+            var parentOffset = $dropdownParent.offset();
+            var containerOffset = instance.$container.offset();
+
+            if (!parentOffset || !containerOffset) {
+                return;
+            }
+
+            instance.$dropdown.css({
+                top: containerOffset.top - parentOffset.top + instance.$container.outerHeight(false),
+                left: containerOffset.left - parentOffset.left,
+                width: instance.$container.outerWidth(false)
             });
         }
 
@@ -925,6 +942,26 @@
             $('#editTimerForm .tag-checkbox').trigger('change');
 
             $('#editTimerModal').modal('show');
+        });
+
+        $(document).on('select2:open', function(event) {
+            activeSelect2Instance = $(event.target).data('select2') || null;
+
+            requestAnimationFrame(function() {
+                repositionSelect2Dropdown(activeSelect2Instance);
+            });
+        });
+
+        $(document).on('select2:close', function() {
+            activeSelect2Instance = null;
+        });
+
+        $('#batchTimerModal .modal-body, #editTimerModal .modal-body').on('scroll', function() {
+            repositionSelect2Dropdown(activeSelect2Instance);
+        });
+
+        $(window).on('resize', function() {
+            repositionSelect2Dropdown(activeSelect2Instance);
         });
 
         if (batchHadErrors) {
