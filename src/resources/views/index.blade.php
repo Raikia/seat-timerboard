@@ -594,6 +594,99 @@
         width: 100% !important;
     }
 
+    #batchTimerModal .select2-container--bootstrap4 .select2-selection,
+    #editTimerModal .select2-container--bootstrap4 .select2-selection {
+        min-height: calc(2.25rem + 2px);
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        background: #fff;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4.select2-container--focus .select2-selection,
+    #batchTimerModal .select2-container--bootstrap4.select2-container--open .select2-selection,
+    #editTimerModal .select2-container--bootstrap4.select2-container--focus .select2-selection,
+    #editTimerModal .select2-container--bootstrap4.select2-container--open .select2-selection {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.14);
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-selection--single,
+    #editTimerModal .select2-container--bootstrap4 .select2-selection--single {
+        padding: 0.375rem 0.75rem;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered,
+    #editTimerModal .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+        padding: 0;
+        color: #495057;
+        line-height: 1.5;
+        display: block;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-selection__placeholder,
+    #editTimerModal .select2-container--bootstrap4 .select2-selection__placeholder {
+        color: #6c757d;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-selection__arrow,
+    #editTimerModal .select2-container--bootstrap4 .select2-selection__arrow {
+        display: none;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-selection__clear,
+    #editTimerModal .select2-container--bootstrap4 .select2-selection__clear {
+        color: #6c757d;
+        margin-right: 0;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-dropdown,
+    #editTimerModal .select2-container--bootstrap4 .select2-dropdown {
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        box-shadow: 0 10px 24px rgba(23, 43, 77, 0.14);
+        overflow: hidden;
+        background: #fff;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-search--dropdown,
+    #editTimerModal .select2-container--bootstrap4 .select2-search--dropdown {
+        padding: 0.45rem;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-search__field,
+    #editTimerModal .select2-container--bootstrap4 .select2-search__field {
+        height: calc(2rem + 2px);
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        padding: 0.25rem 0.6rem;
+        font-size: 0.95rem;
+        background: #fff;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-results__option,
+    #editTimerModal .select2-container--bootstrap4 .select2-results__option {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.95rem;
+        color: #495057;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected],
+    #editTimerModal .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected] {
+        background: #e9f2ff;
+        color: #1f3b57;
+    }
+
+    #batchTimerModal .select2-container--bootstrap4 .select2-results__option[aria-selected=true],
+    #editTimerModal .select2-container--bootstrap4 .select2-results__option[aria-selected=true] {
+        background: #f2f4f7;
+        color: #1f3b57;
+        font-weight: 600;
+    }
+
     #batchTimerModal .select2-dropdown,
     #editTimerModal .select2-dropdown {
         z-index: 2055;
