@@ -463,6 +463,13 @@
         border-radius: 14px;
         overflow: visible;
         box-shadow: 0 10px 24px rgba(23, 43, 77, 0.08);
+        transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    }
+
+    #batchTimerModal .batch-timer-row.is-active {
+        border-color: rgba(33, 76, 108, 0.28);
+        box-shadow: 0 16px 32px rgba(23, 43, 77, 0.12);
+        transform: translateY(-1px);
     }
 
     #batchTimerModal .batch-timer-row + .batch-timer-row {
@@ -475,6 +482,10 @@
         padding: 0.8rem 1rem;
     }
 
+    #batchTimerModal .batch-timer-row.is-collapsed .card-header {
+        border-bottom-color: transparent;
+    }
+
     #batchTimerModal .batch-timer-row .card-body {
         background: rgba(255, 255, 255, 0.95);
         padding: 1rem 1rem 0.5rem;
@@ -484,6 +495,8 @@
         display: flex;
         align-items: center;
         gap: 0.65rem;
+        min-width: 0;
+        cursor: pointer;
     }
 
     #batchTimerModal .batch-row-index {
@@ -505,10 +518,60 @@
         font-size: 0.83rem;
     }
 
+    #batchTimerModal .batch-row-title-wrap {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    #batchTimerModal .batch-row-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.35rem;
+    }
+
+    #batchTimerModal .batch-summary-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.22rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(24, 50, 71, 0.08);
+        color: #2c4358;
+        font-size: 0.77rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    #batchTimerModal .batch-summary-pill.is-placeholder {
+        color: #7a8897;
+        background: rgba(122, 136, 151, 0.12);
+        font-weight: 500;
+    }
+
     #batchTimerModal .batch-row-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
+        align-items: center;
+    }
+
+    #batchTimerModal .toggle-batch-row-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.2rem;
+        height: 2.2rem;
+        padding: 0;
+        border-radius: 999px;
+    }
+
+    #batchTimerModal .toggle-batch-row-btn i {
+        transition: transform 0.18s ease;
+    }
+
+    #batchTimerModal .batch-timer-row.is-collapsed .toggle-batch-row-btn i {
+        transform: rotate(-90deg);
     }
 
     #batchTimerModal .batch-footer-summary {
@@ -693,21 +756,25 @@
 
         function buildBatchRow(rowKey, timerData) {
             var data = timerData || {};
-                var selectedRole = data.role_id !== undefined && data.role_id !== null && data.role_id !== ''
+            var selectedRole = data.role_id !== undefined && data.role_id !== null && data.role_id !== ''
                 ? data.role_id
                 : (defaultRoleId || '');
 
             return '' +
                 '<div class="card mb-3 batch-timer-row" data-row-key="' + rowKey + '">' +
                     '<div class="card-header d-flex flex-wrap justify-content-between align-items-center">' +
-                        '<div class="batch-row-heading">' +
+                        '<div class="batch-row-heading" role="button" tabindex="0" aria-expanded="true">' +
                             '<span class="batch-row-index">1</span>' +
-                            '<div>' +
+                            '<div class="batch-row-title-wrap">' +
                                 '<strong class="batch-row-title d-block">Timer</strong>' +
                                 '<span class="batch-row-subtitle">Fill this out or duplicate it to build the next timer faster.</span>' +
+                                '<div class="batch-row-summary"></div>' +
                             '</div>' +
                         '</div>' +
                         '<div class="batch-row-actions">' +
+                            '<button type="button" class="btn btn-light btn-sm toggle-batch-row-btn" title="Collapse or expand timer">' +
+                                '<i class="fas fa-chevron-down"></i>' +
+                            '</button>' +
                             '<button type="button" class="btn btn-outline-secondary btn-sm duplicate-batch-row-btn">' +
                                 '<i class="far fa-clone"></i> Duplicate' +
                             '</button>' +
@@ -784,6 +851,77 @@
             $('#batch-footer-summary').text(rowCount === 1 ? '1 timer ready to save' : rowCount + ' timers ready to save');
         }
 
+        function roleTitleForValue(roleId) {
+            if (roleId === null || roleId === undefined || roleId === '') {
+                return 'Public';
+            }
+
+            var normalizedRoleId = String(roleId);
+            var matchedRole = availableRoles.find(function(role) {
+                return String(role.id) === normalizedRoleId;
+            });
+
+            return matchedRole ? matchedRole.title : 'Restricted';
+        }
+
+        function createSummaryPill(iconClass, text, isPlaceholder) {
+            var pillClass = 'batch-summary-pill' + (isPlaceholder ? ' is-placeholder' : '');
+
+            return '<span class="' + pillClass + '"><i class="' + iconClass + '"></i>' + escapeHtml(text) + '</span>';
+        }
+
+        function updateBatchRowSummary($row) {
+            var data = collectBatchRowData($row);
+            var summaryBits = [];
+
+            summaryBits.push(createSummaryPill('fas fa-map-marker-alt', data.system || 'System pending', !data.system));
+            summaryBits.push(createSummaryPill('fas fa-building', data.structure_type || 'Type pending', !data.structure_type));
+            summaryBits.push(createSummaryPill('far fa-clock', data.time_input || 'Time pending', !data.time_input));
+            summaryBits.push(createSummaryPill('fas fa-flag', data.owner_corporation || 'Owner pending', !data.owner_corporation));
+
+            if (data.structure_name) {
+                summaryBits.push(createSummaryPill('fas fa-signature', data.structure_name, false));
+            }
+
+            if (data.attacker_corporation) {
+                summaryBits.push(createSummaryPill('fas fa-crosshairs', data.attacker_corporation, false));
+            }
+
+            if (data.tags.length) {
+                summaryBits.push(createSummaryPill('fas fa-tags', data.tags.length + (data.tags.length === 1 ? ' tag' : ' tags'), false));
+            }
+
+            summaryBits.push(createSummaryPill('fas fa-user-shield', roleTitleForValue(data.role_id), false));
+
+            $row.find('.batch-row-summary').html(summaryBits.join(''));
+        }
+
+        function setBatchRowExpanded($row, expanded, immediate) {
+            var $body = $row.find('.card-body');
+            var $heading = $row.find('.batch-row-heading');
+            var $toggle = $row.find('.toggle-batch-row-btn');
+
+            $row.toggleClass('is-collapsed', !expanded);
+            $row.toggleClass('is-active', expanded);
+            $heading.attr('aria-expanded', expanded ? 'true' : 'false');
+            $toggle.attr('aria-expanded', expanded ? 'true' : 'false');
+
+            if (immediate) {
+                $body.toggle(expanded);
+            } else {
+                $body.stop(true, true)[expanded ? 'slideDown' : 'slideUp'](140);
+            }
+        }
+
+        function activateBatchRow($row, immediate) {
+            $('#batch-timer-rows .batch-timer-row').not($row).each(function() {
+                setBatchRowExpanded($(this), false, immediate);
+            });
+
+            setBatchRowExpanded($row, true, immediate);
+            updateBatchRowSummary($row);
+        }
+
         function initializeBatchRow($row, timerData) {
             var data = timerData || {};
             var $modal = $('#batchTimerModal');
@@ -799,6 +937,7 @@
             setSelectValue($row.find('.batch-attacker-corporation-select'), data.attacker_corporation || '');
             $row.find('.batch-role-select').val(data.role_id !== undefined && data.role_id !== null ? data.role_id : (defaultRoleId || '')).trigger('change');
             $row.find('.tag-checkbox').trigger('change');
+            updateBatchRowSummary($row);
         }
 
         function collectBatchRowData($row) {
@@ -821,10 +960,10 @@
         }
 
         function focusBatchRow($row) {
-            var $firstInput = $row.find('input[name$="[time_input]"]').first();
+            var $firstInput = $row.find('.batch-system-select').first();
 
             if ($firstInput.length) {
-                $firstInput.trigger('focus');
+                $firstInput.select2('open');
             }
 
             $row[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -837,6 +976,7 @@
             $('#batch-timer-rows').append($row);
             initializeBatchRow($row, timerData);
             refreshBatchRowTitles();
+            activateBatchRow($row, true);
 
             if (shouldFocus) {
                 focusBatchRow($row);
@@ -853,6 +993,11 @@
             timers.forEach(function(timer) {
                 addBatchTimerRow(timer, false);
             });
+
+            var $lastRow = $('#batch-timer-rows .batch-timer-row').last();
+            if ($lastRow.length) {
+                activateBatchRow($lastRow, true);
+            }
         }
 
         function resetEditForm() {
@@ -898,14 +1043,53 @@
             });
 
             $(document).on('click', '.remove-batch-row-btn', function() {
+                var $row = $(this).closest('.batch-timer-row');
+                var wasActive = $row.hasClass('is-active');
+
                 if ($('#batch-timer-rows .batch-timer-row').length === 1) {
                     return;
                 }
 
-                $(this).closest('.batch-timer-row').remove();
+                var $nextRow = $row.next('.batch-timer-row');
+                var $prevRow = $row.prev('.batch-timer-row');
+
+                $row.remove();
                 refreshBatchRowTitles();
+
+                if (wasActive) {
+                    activateBatchRow($nextRow.length ? $nextRow : $prevRow, true);
+                }
             });
         @endcan
+
+        $(document).on('click', '.batch-row-heading, .toggle-batch-row-btn', function(event) {
+            event.preventDefault();
+
+            var $row = $(this).closest('.batch-timer-row');
+            activateBatchRow($row, false);
+        });
+
+        $(document).on('keydown', '.batch-row-heading', function(event) {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+                return;
+            }
+
+            event.preventDefault();
+            activateBatchRow($(this).closest('.batch-timer-row'), false);
+        });
+
+        $(document).on('input change', '#batch-timer-rows input, #batch-timer-rows select', function() {
+            var $row = $(this).closest('.batch-timer-row');
+            updateBatchRowSummary($row);
+        });
+
+        $(document).on('focus', '#batch-timer-rows input, #batch-timer-rows select, #batch-timer-rows .select2-selection', function() {
+            var $row = $(this).closest('.batch-timer-row');
+
+            if ($row.length && !$row.hasClass('is-active')) {
+                activateBatchRow($row, false);
+            }
+        });
 
         $(document).on('change', '.tag-checkbox', function() {
             var label = $('label[for="' + $(this).attr('id') + '"]');
