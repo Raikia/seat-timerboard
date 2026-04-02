@@ -22,6 +22,10 @@ Route::group([
 
     // Create route
     Route::group(['middleware' => 'can:seat-timerboard.create'], function () {
+        Route::post('/create-many', [
+            'as'   => 'timerboard.storeMany',
+            'uses' => 'TimerboardController@storeMany',
+        ]);
         Route::post('/create', [
             'as'   => 'timerboard.store',
             'uses' => 'TimerboardController@store',

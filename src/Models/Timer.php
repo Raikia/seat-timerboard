@@ -69,4 +69,36 @@ class Timer extends Model
 
         return "https://images.evetech.net/types/{$typeId}/render?size=64";
     }
+
+    public function getMapLocationName(): ?string
+    {
+        if (!$this->mapDenormalize) {
+            return null;
+        }
+
+        if ($this->mapDenormalize->solarSystemID === null) {
+            return $this->mapDenormalize->itemName;
+        }
+
+        return optional($this->mapDenormalize->system)->itemName;
+    }
+
+    public function getRegionName(): string
+    {
+        return optional(optional($this->mapDenormalize)->region)->itemName ?? 'Unknown';
+    }
+
+    public function getDotlanMapUrl(): ?string
+    {
+        $locationName = $this->getMapLocationName();
+        $regionName = optional(optional($this->mapDenormalize)->region)->itemName;
+
+        if (!$locationName || !$regionName) {
+            return null;
+        }
+
+        return 'https://evemaps.dotlan.net/map/' .
+            str_replace(' ', '_', $regionName) . '/' .
+            str_replace(' ', '_', $locationName);
+    }
 }
