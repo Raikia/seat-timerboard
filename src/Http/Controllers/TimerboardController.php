@@ -134,37 +134,64 @@ class TimerboardController extends Controller
 
     private function parseTimeInput($input)
     {
+        if (!is_string($input)) {
+            return null;
+        }
+
+        $input = trim($input);
+
+        if ($input === '') {
+            return null;
+        }
+
         // Try absolute formats "YYYY.MM.DD HH:MM" and "YYYY.MM.DD HH:MM:SS"
         foreach (['Y.m.d H:i:s', 'Y.m.d H:i'] as $format) {
             try {
-                return Carbon::createFromFormat($format, $input, 'UTC');
+                $date = Carbon::createFromFormat($format, $input, 'UTC');
+
+                if ($date && $date->format($format) === $input) {
+                    return $date;
+                }
             } catch (\Exception $e) {
                 // Continue to the next format.
             }
         }
 
-        // Try relative format "2 days, 13 minutes"
-        // Simple regex for days, hours, minutes
         $now = Carbon::now('UTC');
-        
-        if (preg_match('/(\d+)\s*d(ays?)?/', $input, $matches)) {
-            $now->addDays((int)$matches[1]);
-        }
-        if (preg_match('/(\d+)\s*h(ours?)?/', $input, $matches)) {
-            $now->addHours((int)$matches[1]);
-        }
-        if (preg_match('/(\d+)\s*m(in(utes?)?)?/', $input, $matches)) {
-            $now->addMinutes((int)$matches[1]);
-        }
-        
-        // If we added nothing, and checking if regex matched anything at all is tricky without a flag.
-        // But if the input wasn't absolute and we are here, we verify if it looks like relative.
-        // A better check might be needed, but for now assuming if it has digits it's relative.
-        if (preg_match('/\d/', $input)) {
-             return $now;
+        $matches = [];
+
+        preg_match_all('/(\d+)\s*(d(?:ays?)?|h(?:ours?)?|m(?:in(?:ute)?s?)?)/i', $input, $matches, PREG_SET_ORDER);
+
+        if (empty($matches)) {
+            return null;
         }
 
-        return null;
+        $remaining = preg_replace('/(\d+)\s*(d(?:ays?)?|h(?:ours?)?|m(?:in(?:ute)?s?)?)/i', '', $input);
+
+        if (preg_match('/[^\s,]/', $remaining)) {
+            return null;
+        }
+
+        foreach ($matches as $match) {
+            $value = (int) $match[1];
+            $unit = strtolower($match[2]);
+
+            if (strpos($unit, 'd') === 0) {
+                $now->addDays($value);
+                continue;
+            }
+
+            if (strpos($unit, 'h') === 0) {
+                $now->addHours($value);
+                continue;
+            }
+
+            if (strpos($unit, 'm') === 0) {
+                $now->addMinutes($value);
+            }
+        }
+
+        return $now;
     }
 
     public function searchSystems(Request $request)
@@ -317,7 +344,7 @@ class TimerboardController extends Controller
 
     public function destroyElapsed()
     {
-        Timer::where('eve_time', '<', Carbon::now())->delete();
+        Timer::where('eve_time', '<', Carbon::now()->subHours(2))->delete();
 
         return redirect()->route('timerboard.settings')->with('success', 'All elapsed timers deleted successfully.');
     }

@@ -27,21 +27,19 @@ class NewTimer extends Notification implements ShouldQueue
     public function toDiscord($notifiable)
     {
         $imageUrl = $this->timer->getStructureImage();
+        $dotlanUrl = $this->timer->getDotlanMapUrl();
+        $regionName = $this->timer->getRegionName();
+        $locationField = $dotlanUrl
+            ? sprintf("[%s](%s)\n(%s)", $this->timer->system, $dotlanUrl, $regionName)
+            : sprintf("%s\n(%s)", $this->timer->system, $regionName);
 
         return (new DiscordMessage)
-            ->embed(function ($embed) use ($imageUrl) {
+            ->embed(function ($embed) use ($imageUrl, $locationField) {
                 $embed->title('New Timer Created');
                 $embed->thumb($imageUrl);
                 $embed->color(0x00FF00); // Green
-                
-                // Safe URL encoding
-                $systemUrl = 'http://evemaps.dotlan.net/system/' . rawurlencode(str_replace(' ', '_', $this->timer->mapDenormalize->solarSystemID==null?$this->timer->mapDenormalize->itemName:$this->timer->mapDenormalize->system->itemName));
-                $regionName = $this->timer->mapDenormalize->region->itemName ?? 'Unknown';
-                
-                $embed->field('Location', sprintf("[%s](%s)\n(%s)", 
-                        $this->timer->system,
-                        $systemUrl,
-                        $regionName), true);
+
+                $embed->field('Location', $locationField, true);
                 
                 $embed->field('Structure Type', $this->timer->structure_type, true);
                 $embed->field('Structure Name', $this->timer->structure_name ?: 'N/A', true);
@@ -55,7 +53,7 @@ class NewTimer extends Notification implements ShouldQueue
                 }
 
                 $embed->field('EVE Time', $this->timer->eve_time->format('Y-m-d H:i:s') . "\n(" . $this->timer->eve_time->diffForHumans() . ")", true);
-                $embed->field('Created By', $this->timer->user->name, true);
+                $embed->field('Created By', optional($this->timer->user)->name ?? 'Unknown', true);
                 $embed->field('Role Access', $this->timer->role ? $this->timer->role->title : 'Public', true);
             });
     }

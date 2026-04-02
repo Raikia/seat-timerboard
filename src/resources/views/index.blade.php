@@ -44,12 +44,16 @@
                             @foreach($currentTimers as $timer)
                                 <tr class="timer-row active-timer" data-time="{{ $timer->eve_time->toIso8601String() }}">
                                     <td>
-                                        <a href="https://evemaps.dotlan.net/map/{{ str_replace(' ', '_', $timer->mapDenormalize->region->itemName) }}/{{ str_replace(' ', '_', $timer->mapDenormalize->solarSystemID==null?$timer->mapDenormalize->itemName:$timer->mapDenormalize->system->itemName) }}" target="_blank">
+                                        @if($timer->getDotlanMapUrl())
+                                            <a href="{{ $timer->getDotlanMapUrl() }}" target="_blank">
+                                                {{ $timer->system }}
+                                            </a>
+                                        @else
                                             {{ $timer->system }}
-                                        </a>
+                                        @endif
                                         <br>
                                         <span class="text-muted small">
-                                            {{ $timer->mapDenormalize->region->itemName ?? '' }}
+                                            {{ $timer->getRegionName() }}
                                         </span>
                                     </td>
                                     <td>
@@ -121,12 +125,16 @@
                             @foreach($elapsedTimers as $timer)
                                 <tr class="timer-row static-timer" data-time="{{ $timer->eve_time->toIso8601String() }}">
                                     <td>
-                                        <a href="https://evemaps.dotlan.net/map/{{ str_replace(' ', '_', $timer->mapDenormalize->region->itemName) }}/{{ str_replace(' ', '_', $timer->mapDenormalize->solarSystemID==null?$timer->mapDenormalize->itemName:$timer->mapDenormalize->system->itemName) }}" target="_blank">
+                                        @if($timer->getDotlanMapUrl())
+                                            <a href="{{ $timer->getDotlanMapUrl() }}" target="_blank">
+                                                {{ $timer->system }}
+                                            </a>
+                                        @else
                                             {{ $timer->system }}
-                                        </a>
+                                        @endif
                                         <br>
                                         <span class="text-muted small">
-                                            {{ $timer->mapDenormalize->region->itemName ?? '' }}
+                                            {{ $timer->getRegionName() }}
                                         </span>
                                     </td>
                                     <td>
