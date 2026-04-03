@@ -204,8 +204,14 @@
                                         <td>@include('seat-timerboard::partials.timer_name', ['timer' => $timer])</td>
                                         <td>{{ $timer->owner_corporation }}</td>
                                         <td>{{ $timer->attacker_corporation }}</td>
-                                        <td class="timer-time-cell">{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
-                                        <td class="local-time timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
+                                        <td class="timer-time-cell">
+                                            <div class="timer-time-primary">{{ $timer->eve_time->copy()->timezone('UTC')->format('l \\@ g:ia') }}</div>
+                                            <div class="timer-time-secondary">{{ $timer->eve_time->copy()->timezone('UTC')->format('n/j/Y') }}</div>
+                                        </td>
+                                        <td class="local-time timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">
+                                            <div class="timer-time-primary">Calculating...</div>
+                                            <div class="timer-time-secondary">&nbsp;</div>
+                                        </td>
                                         <td><span class="countdown timer-countdown-pill">Calculating...</span></td>
                                         <td>
                                             @foreach($timer->tags as $tag)
@@ -304,8 +310,14 @@
                                         <td>@include('seat-timerboard::partials.timer_name', ['timer' => $timer])</td>
                                         <td>{{ $timer->owner_corporation }}</td>
                                         <td>{{ $timer->attacker_corporation }}</td>
-                                        <td class="timer-time-cell">{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
-                                        <td class="local-time timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
+                                        <td class="timer-time-cell">
+                                            <div class="timer-time-primary">{{ $timer->eve_time->copy()->timezone('UTC')->format('l \\@ g:ia') }}</div>
+                                            <div class="timer-time-secondary">{{ $timer->eve_time->copy()->timezone('UTC')->format('n/j/Y') }}</div>
+                                        </td>
+                                        <td class="local-time timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">
+                                            <div class="timer-time-primary">Calculating...</div>
+                                            <div class="timer-time-secondary">&nbsp;</div>
+                                        </td>
                                         <td><span class="countdown timer-countdown-pill is-elapsed">ELAPSED</span></td>
                                         <td>
                                             @foreach($timer->tags as $tag)

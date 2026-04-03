@@ -342,6 +342,19 @@
         white-space: nowrap;
     }
 
+    .timer-time-primary {
+        color: #21384c;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .timer-time-secondary {
+        margin-top: 0.15rem;
+        color: #7a8897;
+        font-size: 0.78rem;
+        line-height: 1.15;
+    }
+
     .timer-created-by-cell {
         min-width: 9rem;
     }

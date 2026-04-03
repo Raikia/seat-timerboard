@@ -385,6 +385,36 @@
                 ('0' + date.getUTCSeconds()).slice(-2);
         }
 
+        function formatDisplayDateTime(date) {
+            var weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
+            var time = date.toLocaleTimeString(undefined, {
+                hour: 'numeric',
+                minute: '2-digit'
+            }).toLowerCase().replace(/\s/g, '');
+            var displayDate = date.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric'
+            });
+
+            return {
+                primary: weekday + ' @ ' + time,
+                secondary: displayDate
+            };
+        }
+
+        function renderLocalTimeCell(cell, date) {
+            if (!cell) {
+                return;
+            }
+
+            var formatted = formatDisplayDateTime(date);
+
+            cell.innerHTML =
+                '<div class="timer-time-primary">' + escapeHtml(formatted.primary) + '</div>' +
+                '<div class="timer-time-secondary">' + escapeHtml(formatted.secondary) + '</div>';
+        }
+
         function buildStructureTypeOptions(selectedValue) {
             var options = '<option value="">Select Type</option>';
 
@@ -896,8 +926,9 @@
                 const diff = eveTime - now;
 
                 const localTimeCell = row.querySelector('.local-time');
-                if (localTimeCell.textContent === 'Calculating...') {
-                    localTimeCell.textContent = eveTime.toLocaleString();
+                if (localTimeCell && !localTimeCell.dataset.rendered) {
+                    renderLocalTimeCell(localTimeCell, eveTime);
+                    localTimeCell.dataset.rendered = '1';
                 }
 
                 const countdownCell = row.querySelector('.countdown');
@@ -940,8 +971,9 @@
                 const timeStr = row.getAttribute('data-time');
                 const eveTime = new Date(timeStr);
                 const localTimeCell = row.querySelector('.local-time');
-                if (localTimeCell && localTimeCell.textContent === 'Calculating...') {
-                    localTimeCell.textContent = eveTime.toLocaleString();
+                if (localTimeCell && !localTimeCell.dataset.rendered) {
+                    renderLocalTimeCell(localTimeCell, eveTime);
+                    localTimeCell.dataset.rendered = '1';
                 }
 
                 row.classList.add('is-elapsed');
