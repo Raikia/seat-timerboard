@@ -5,6 +5,11 @@
 
 @section('content')
     @php
+        $activeSkin = setting('skin') ?: 'default';
+        $timerboardSkinClasses = 'timerboard-skin-' . $activeSkin;
+        if (in_array($activeSkin, ['jet', 'iuligigi', 'gigigraphite'], true)) {
+            $timerboardSkinClasses .= ' timerboard-dark-skin';
+        }
         $currentCount = $currentTimers->count();
         $elapsedCount = $elapsedTimers->count();
         $noteCount = $currentTimers->merge($elapsedTimers)->filter(function ($timer) {
@@ -15,19 +20,12 @@
         })->count();
     @endphp
 
-    <div class="card">
+    <div class="card {{ $timerboardSkinClasses }}">
         <div class="card-body">
             <div class="timerboard-toolbar">
                 <div class="timerboard-toolbar-copy">
                     <h5 class="mb-1">Timer Overview</h5>
                     <small class="text-muted">Current timers, urgent windows, saved notes, and elapsed references in one place.</small>
-                </div>
-                <div class="timerboard-toolbar-actions">
-                    @can('seat-timerboard.create')
-                        <button type="button" class="btn btn-primary timerboard-primary-action" id="create-timer-btn">
-                            <i class="fas fa-plus"></i> Add Timers
-                        </button>
-                    @endcan
                 </div>
             </div>
 
@@ -53,6 +51,14 @@
                     <span class="timerboard-stat-meta">Past the 2-hour buffer</span>
                 </div>
             </div>
+
+            @can('seat-timerboard.create')
+                <div class="timerboard-action-row">
+                    <button type="button" class="btn btn-primary timerboard-primary-action" id="create-timer-btn">
+                        <i class="fas fa-plus"></i> Add Timers
+                    </button>
+                </div>
+            @endcan
 
             <div class="timerboard-filters mb-3" id="timerboard-filters">
                 <div class="timerboard-filters-header">
@@ -364,13 +370,13 @@
     </div>
 
     @can('seat-timerboard.create')
-        <div class="modal fade" id="batchTimerModal" tabindex="-1" role="dialog" aria-labelledby="batchTimerModalLabel" aria-hidden="true">
+        <div class="modal fade {{ $timerboardSkinClasses }}" id="batchTimerModal" tabindex="-1" role="dialog" aria-labelledby="batchTimerModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-xl" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <div>
                             <h5 class="modal-title" id="batchTimerModalLabel">Add Timers</h5>
-                            <small class="d-block mt-1" style="opacity: 0.85;">Queue up as many timers as you need and submit them together.</small>
+                            <small class="d-block mt-1 batch-modal-description">Build and save multiple timers at once.</small>
                         </div>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
@@ -398,8 +404,8 @@
                                         <i class="fas fa-layer-group"></i>
                                         <span id="batch-timer-count">1 timer</span>
                                     </div>
-                                    <div class="text-muted">
-                                        Each timer keeps its own system, structure, tags, and access role.
+                                    <div class="text-muted batch-toolbar-copy">
+                                        Each row saves as its own timer.
                                     </div>
                                 </div>
                                 <div class="batch-toolbar-actions">
@@ -435,7 +441,7 @@
                         <span class="batch-row-index">1</span>
                         <div class="batch-row-title-wrap">
                             <strong class="batch-row-title d-block">Timer</strong>
-                            <span class="batch-row-subtitle">Fill this out or duplicate it to build the next timer faster.</span>
+                            <span class="batch-row-subtitle">Fill this in or duplicate it to move faster.</span>
                             <div class="batch-row-summary"></div>
                         </div>
                     </div>
@@ -508,7 +514,7 @@
         </script>
     @endcan
 
-    <div class="modal fade" id="timerNoteModal" tabindex="-1" role="dialog" aria-labelledby="timerNoteModalLabel" aria-hidden="true">
+    <div class="modal fade {{ $timerboardSkinClasses }}" id="timerNoteModal" tabindex="-1" role="dialog" aria-labelledby="timerNoteModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -553,7 +559,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="editTimerModal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel" aria-hidden="true">
+    <div class="modal fade {{ $timerboardSkinClasses }}" id="editTimerModal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
