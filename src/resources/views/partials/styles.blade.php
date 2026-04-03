@@ -66,6 +66,47 @@
         box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.03);
     }
 
+    .timerboard-filters {
+        padding: 1rem 1rem 0.85rem;
+        border: 1px solid rgba(31, 73, 103, 0.1);
+        border-radius: 12px;
+        background: linear-gradient(180deg, #fbfcfe 0%, #f4f7fb 100%);
+        box-shadow: 0 8px 20px rgba(24, 50, 71, 0.05);
+    }
+
+    .timerboard-filters-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.75rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .timerboard-filters-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .timer-filter-summary-header {
+        min-height: 1rem;
+    }
+
+    .timerboard-filters .form-group label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        color: #54657a;
+        margin-bottom: 0.35rem;
+    }
+
+    .timerboard-filters .form-control-sm {
+        min-height: calc(1.8125rem + 2px);
+    }
+
     #batchTimerModal .batch-timer-row .form-group,
     #editTimerModal .form-group,
     #timerNoteModal .form-group {

@@ -66,6 +66,47 @@
             $button.find('.note-btn-label').text(noteExists ? 'Edit saved note' : 'Add optional note');
         }
 
+        function getTimerFilterValues() {
+            return {
+                structureType: $('#filter_structure_type').val() || '',
+                tagId: $('#filter_tag').val() || '',
+                region: normalizeNotes($('#filter_region').val()).toLowerCase(),
+                roleId: $('#filter_role').val() || '',
+                notes: $('#filter_notes').val() || '',
+                owner: normalizeNotes($('#filter_owner').val()).toLowerCase(),
+                attacker: normalizeNotes($('#filter_attacker').val()).toLowerCase(),
+                search: normalizeNotes($('#filter_search').val()).toLowerCase()
+            };
+        }
+
+        function updateFilterSummary() {
+            var filters = getTimerFilterValues();
+            var activeFilters = [];
+
+            if (filters.structureType) activeFilters.push('type');
+            if (filters.tagId) activeFilters.push('tag');
+            if (filters.region) activeFilters.push('region');
+            if (filters.roleId) activeFilters.push('visibility');
+            if (filters.notes) activeFilters.push('notes');
+            if (filters.owner) activeFilters.push('owner');
+            if (filters.attacker) activeFilters.push('attacker');
+            if (filters.search) activeFilters.push('search');
+
+            $('#timer-filter-summary').text(
+                activeFilters.length
+                    ? activeFilters.length + (activeFilters.length === 1 ? ' filter active.' : ' filters active.')
+                    : 'No filters applied.'
+            );
+        }
+
+        function updateFilterToggleButton(expanded) {
+            $('#toggle-timer-filters-btn')
+                .attr('aria-expanded', expanded ? 'true' : 'false')
+                .html(expanded
+                    ? '<i class="fas fa-sliders-h"></i> Hide Filters'
+                    : '<i class="fas fa-sliders-h"></i> Show Filters');
+        }
+
         function openTimerNoteModal(config) {
             noteModalApplyHandler = typeof config.onApply === 'function' ? config.onApply : null;
 
@@ -105,6 +146,76 @@
             if ($('.modal.show').length) {
                 $('body').addClass('modal-open');
             }
+        });
+
+        $('#timerboard-filters-body').on('shown.bs.collapse', function() {
+            updateFilterToggleButton(true);
+        });
+
+        $('#timerboard-filters-body').on('hidden.bs.collapse', function() {
+            updateFilterToggleButton(false);
+        });
+
+        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+            if (['current-timers-table', 'elapsed-timers-table'].indexOf(settings.nTable.id) === -1) {
+                return true;
+            }
+
+            var row = settings.aoData[dataIndex] && settings.aoData[dataIndex].nTr;
+            if (!row) {
+                return true;
+            }
+
+            var $row = $(row);
+            var filters = getTimerFilterValues();
+            var structureType = normalizeNotes($row.attr('data-structure-type')).toLowerCase();
+            var region = normalizeNotes($row.attr('data-region')).toLowerCase();
+            var owner = normalizeNotes($row.attr('data-owner')).toLowerCase();
+            var attacker = normalizeNotes($row.attr('data-attacker')).toLowerCase();
+            var roleId = String($row.attr('data-role-id') || '');
+            var hasNotes = String($row.attr('data-has-notes') || '0');
+            var tagIds = String($row.attr('data-tag-ids') || '')
+                .split(',')
+                .filter(function(value) { return value !== ''; });
+            var rowText = normalizeNotes($row.text()).toLowerCase();
+
+            if (filters.structureType && structureType !== filters.structureType.toLowerCase()) {
+                return false;
+            }
+
+            if (filters.tagId && tagIds.indexOf(filters.tagId) === -1) {
+                return false;
+            }
+
+            if (filters.region && region !== filters.region) {
+                return false;
+            }
+
+            if (filters.roleId && roleId !== filters.roleId) {
+                return false;
+            }
+
+            if (filters.notes === 'with' && hasNotes !== '1') {
+                return false;
+            }
+
+            if (filters.notes === 'without' && hasNotes !== '0') {
+                return false;
+            }
+
+            if (filters.owner && owner.indexOf(filters.owner) === -1) {
+                return false;
+            }
+
+            if (filters.attacker && attacker.indexOf(filters.attacker) === -1) {
+                return false;
+            }
+
+            if (filters.search && rowText.indexOf(filters.search) === -1) {
+                return false;
+            }
+
+            return true;
         });
 
         function abortSelectRequest($element) {
@@ -721,7 +832,7 @@
             $('#editTimerModal').modal('show');
         }
 
-        $('.timers-table').DataTable({
+        var timerTables = $('.timers-table').DataTable({
             "order": [[ 5, "asc" ]],
             "columnDefs": [
                 { "orderable": false, "targets": [8, 10] }
@@ -730,6 +841,18 @@
             "paging": true,
             "pageLength": 25,
             "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ]
+        });
+
+        $('#timerboard-filters').on('input change', 'input, select', function() {
+            updateFilterSummary();
+            timerTables.draw();
+        });
+
+        $('#clear-timer-filters-btn').click(function() {
+            $('#timerboard-filters').find('input').val('');
+            $('#timerboard-filters').find('select').val('');
+            updateFilterSummary();
+            timerTables.search('').draw();
         });
 
         function updateTimers() {
@@ -788,6 +911,8 @@
         initStaticTimers();
         setInterval(updateTimers, 1000);
         updateTimers();
+        updateFilterSummary();
+        updateFilterToggleButton(false);
 
         if (!batchHadErrors) {
             $('.tag-checkbox').trigger('change');

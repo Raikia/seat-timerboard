@@ -47,8 +47,19 @@ class TimerboardController extends Controller
         $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
         $defaultRoleId = $defaultRole ? $defaultRole->value : null;
         $structureTypes = $this->getStructureTypes();
+        $filterRegions = $allTimers->map(function ($timer) {
+            return $timer->getRegionName();
+        })->filter()->unique()->sort()->values();
 
-        return view('seat-timerboard::index', compact('currentTimers', 'elapsedTimers', 'tags', 'roles', 'defaultRoleId', 'structureTypes'));
+        return view('seat-timerboard::index', compact(
+            'currentTimers',
+            'elapsedTimers',
+            'tags',
+            'roles',
+            'defaultRoleId',
+            'structureTypes',
+            'filterRegions'
+        ));
     }
 
 

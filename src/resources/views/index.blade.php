@@ -12,6 +12,86 @@
             </ul>
         </div>
         <div class="card-body">
+            <div class="timerboard-filters mb-3" id="timerboard-filters">
+                <div class="timerboard-filters-header">
+                    <div>
+                        <h6 class="mb-1">Filters</h6>
+                        <small class="text-muted">Narrow timers by type, tag, region, owner, attacker, visibility, or whether a note exists.</small>
+                    </div>
+                    <div class="timerboard-filters-actions">
+                        <small class="text-muted timer-filter-summary-header" id="timer-filter-summary">No filters applied.</small>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="toggle-timer-filters-btn" data-toggle="collapse" data-target="#timerboard-filters-body" aria-expanded="false" aria-controls="timerboard-filters-body">
+                            <i class="fas fa-sliders-h"></i> Show Filters
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-timer-filters-btn">
+                            <i class="fas fa-undo"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div class="collapse" id="timerboard-filters-body">
+                    <div class="form-row">
+                        <div class="form-group col-lg-2 col-md-4">
+                            <label for="filter_structure_type">Structure Type</label>
+                            <select class="form-control form-control-sm" id="filter_structure_type">
+                                <option value="">Any</option>
+                                @foreach($structureTypes as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group col-lg-2 col-md-4">
+                            <label for="filter_tag">Tag</label>
+                            <select class="form-control form-control-sm" id="filter_tag">
+                                <option value="">Any</option>
+                                @foreach($tags as $tag)
+                                    <option value="{{ $tag->id }}">{{ $tag->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group col-lg-2 col-md-4">
+                            <label for="filter_region">Region</label>
+                            <select class="form-control form-control-sm" id="filter_region">
+                                <option value="">Any</option>
+                                @foreach($filterRegions as $region)
+                                    <option value="{{ $region }}">{{ $region }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group col-lg-2 col-md-4">
+                            <label for="filter_role">Visibility</label>
+                            <select class="form-control form-control-sm" id="filter_role">
+                                <option value="">Any</option>
+                                <option value="public">Public</option>
+                                @foreach($roles as $role)
+                                    <option value="{{ $role->id }}">{{ $role->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group col-lg-2 col-md-4">
+                            <label for="filter_notes">Notes</label>
+                            <select class="form-control form-control-sm" id="filter_notes">
+                                <option value="">Any</option>
+                                <option value="with">Has note</option>
+                                <option value="without">No note</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-lg-2 col-md-4">
+                            <label for="filter_owner">Owner</label>
+                            <input type="text" class="form-control form-control-sm" id="filter_owner" placeholder="Contains...">
+                        </div>
+                    </div>
+                    <div class="form-row mb-0">
+                        <div class="form-group col-lg-3 col-md-4 mb-0">
+                            <label for="filter_attacker">Attacker</label>
+                            <input type="text" class="form-control form-control-sm" id="filter_attacker" placeholder="Contains...">
+                        </div>
+                        <div class="form-group col-lg-3 col-md-4 mb-0">
+                            <label for="filter_search">Quick Search</label>
+                            <input type="text" class="form-control form-control-sm" id="filter_search" placeholder="System, structure, corp...">
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="tab-content">
                 <div class="tab-pane active" id="current">
                     <div class="mb-2 d-flex justify-content-between align-items-center">
@@ -42,7 +122,15 @@
                         </thead>
                         <tbody>
                             @foreach($currentTimers as $timer)
-                                <tr class="timer-row active-timer" data-time="{{ $timer->eve_time->toIso8601String() }}">
+                                <tr class="timer-row active-timer"
+                                    data-time="{{ $timer->eve_time->toIso8601String() }}"
+                                    data-structure-type="{{ $timer->structure_type }}"
+                                    data-region="{{ $timer->getRegionName() }}"
+                                    data-owner="{{ $timer->owner_corporation }}"
+                                    data-attacker="{{ $timer->attacker_corporation }}"
+                                    data-role-id="{{ $timer->role ? $timer->role->id : 'public' }}"
+                                    data-tag-ids="{{ $timer->tags->pluck('id')->implode(',') }}"
+                                    data-has-notes="{{ filled($timer->notes) ? '1' : '0' }}">
                                     <td>
                                         @if($timer->getDotlanMapUrl())
                                             <a href="{{ $timer->getDotlanMapUrl() }}" target="_blank">
@@ -123,7 +211,15 @@
                         </thead>
                         <tbody>
                             @foreach($elapsedTimers as $timer)
-                                <tr class="timer-row static-timer" data-time="{{ $timer->eve_time->toIso8601String() }}">
+                                <tr class="timer-row static-timer"
+                                    data-time="{{ $timer->eve_time->toIso8601String() }}"
+                                    data-structure-type="{{ $timer->structure_type }}"
+                                    data-region="{{ $timer->getRegionName() }}"
+                                    data-owner="{{ $timer->owner_corporation }}"
+                                    data-attacker="{{ $timer->attacker_corporation }}"
+                                    data-role-id="{{ $timer->role ? $timer->role->id : 'public' }}"
+                                    data-tag-ids="{{ $timer->tags->pluck('id')->implode(',') }}"
+                                    data-has-notes="{{ filled($timer->notes) ? '1' : '0' }}">
                                     <td>
                                         @if($timer->getDotlanMapUrl())
                                             <a href="{{ $timer->getDotlanMapUrl() }}" target="_blank">
