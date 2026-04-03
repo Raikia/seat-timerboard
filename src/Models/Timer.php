@@ -13,6 +13,7 @@ class Timer extends Model
         'system',
         'structure_type',
         'structure_name',
+        'notes',
         'owner_corporation',
         'attacker_corporation',
         'eve_time',

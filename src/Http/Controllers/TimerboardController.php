@@ -325,6 +325,7 @@ class TimerboardController extends Controller
             'system' => $data['system'],
             'structure_type' => $data['structure_type'],
             'structure_name' => $data['structure_name'] ?? null,
+            'notes' => $this->normalizeNotes($data['notes'] ?? null),
             'owner_corporation' => $data['owner_corporation'],
             'attacker_corporation' => $data['attacker_corporation'] ?? null,
             'role_id' => $data['role_id'] ?? null,
@@ -346,6 +347,7 @@ class TimerboardController extends Controller
             $prefix . 'system' => 'required|string',
             $prefix . 'structure_type' => 'required|string',
             $prefix . 'structure_name' => 'nullable|string',
+            $prefix . 'notes' => 'nullable|string|max:20000',
             $prefix . 'owner_corporation' => 'required|string',
             $prefix . 'attacker_corporation' => 'nullable|string',
             $prefix . 'time_input' => 'required|string',
@@ -361,6 +363,7 @@ class TimerboardController extends Controller
             'system' => $data['system'],
             'structure_type' => $data['structure_type'],
             'structure_name' => $data['structure_name'] ?? null,
+            'notes' => $data['notes'] ?? null,
             'owner_corporation' => $data['owner_corporation'],
             'attacker_corporation' => $data['attacker_corporation'] ?? null,
             'time_input' => $data['time_input'],
@@ -455,5 +458,16 @@ class TimerboardController extends Controller
         }
 
         return 2;
+    }
+
+    private function normalizeNotes($value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $notes = trim($value);
+
+        return $notes === '' ? null : $notes;
     }
 }
