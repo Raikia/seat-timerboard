@@ -1,4 +1,98 @@
 <style>
+    .timerboard-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    .timerboard-toolbar-copy h5 {
+        color: #183247;
+        font-weight: 700;
+    }
+
+    .timerboard-toolbar-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .timerboard-primary-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.55rem 0.9rem;
+        border-radius: 999px;
+        box-shadow: 0 10px 20px rgba(0, 123, 255, 0.16);
+    }
+
+    .timerboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+    }
+
+    .timerboard-tabs {
+        margin-bottom: 1rem;
+        padding-bottom: 0.15rem;
+        border-bottom: 1px solid rgba(24, 50, 71, 0.08);
+    }
+
+    .timerboard-tabs .nav-pills {
+        gap: 0.5rem;
+    }
+
+    .timerboard-tabs .nav-link {
+        border-radius: 999px;
+        padding: 0.42rem 0.9rem;
+        color: #5f6f82;
+        font-weight: 600;
+    }
+
+    .timerboard-tabs .nav-link.active {
+        box-shadow: 0 8px 16px rgba(24, 50, 71, 0.12);
+    }
+
+    .timerboard-stat-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        padding: 1rem 1.05rem;
+        border: 1px solid rgba(24, 50, 71, 0.09);
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 10px 22px rgba(24, 50, 71, 0.05);
+    }
+
+    .timerboard-stat-card.is-urgent {
+        background: linear-gradient(180deg, #fff7ef 0%, #fffdf9 100%);
+        border-color: rgba(198, 112, 36, 0.2);
+    }
+
+    .timerboard-stat-label {
+        color: #708294;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .timerboard-stat-value {
+        color: #183247;
+        font-size: 1.65rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .timerboard-stat-meta {
+        color: #6f8194;
+        font-size: 0.84rem;
+    }
+
     .timer-name-cell {
         display: inline-flex;
         align-items: center;
@@ -95,6 +189,28 @@
         min-height: 1rem;
     }
 
+    .timer-filter-chip-row {
+        margin-bottom: 0.8rem;
+    }
+
+    .timer-filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+    }
+
+    .timer-filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.28rem 0.65rem;
+        border-radius: 999px;
+        background: rgba(33, 76, 108, 0.08);
+        color: #214c6c;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
     .timerboard-filters .form-group label {
         font-size: 0.78rem;
         font-weight: 600;
@@ -105,6 +221,175 @@
 
     .timerboard-filters .form-control-sm {
         min-height: calc(1.8125rem + 2px);
+    }
+
+    .timerboard-section-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .timerboard-section-header h5 {
+        color: #183247;
+        font-weight: 700;
+    }
+
+    .timerboard-section-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(33, 76, 108, 0.08);
+        color: #214c6c;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    .timerboard-section-pill.is-muted {
+        background: rgba(108, 117, 125, 0.1);
+        color: #5f6f82;
+    }
+
+    .timerboard-table-shell {
+        border: 1px solid rgba(24, 50, 71, 0.08);
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 14px 28px rgba(24, 50, 71, 0.05);
+    }
+
+    .timerboard-table-shell.is-muted {
+        box-shadow: 0 10px 22px rgba(24, 50, 71, 0.035);
+    }
+
+    .timerboard-table-shell .dataTables_wrapper {
+        padding: 0.9rem 0.95rem 0.25rem;
+    }
+
+    .timerboard-table-shell table.dataTable {
+        margin-top: 0 !important;
+        margin-bottom: 0.75rem !important;
+        border-collapse: separate !important;
+        border-spacing: 0;
+    }
+
+    .timerboard-table-shell .table thead th {
+        border-top: 0;
+        border-bottom: 1px solid rgba(24, 50, 71, 0.08);
+        background: #f7f9fc;
+        color: #56687b;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .timerboard-table-shell .table td {
+        border-top: 1px solid rgba(24, 50, 71, 0.06);
+        padding-top: 0.9rem;
+        padding-bottom: 0.9rem;
+        vertical-align: middle;
+    }
+
+    .timer-row {
+        transition: background-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .timer-row.is-soon {
+        background: rgba(255, 248, 235, 0.55);
+    }
+
+    .timer-row.is-imminent {
+        background: rgba(255, 241, 226, 0.92);
+        box-shadow: inset 4px 0 0 #d9822b;
+    }
+
+    .timer-row.static-timer {
+        background: rgba(248, 250, 252, 0.82);
+    }
+
+    .timer-primary-link,
+    .timer-system-cell .font-weight-semibold {
+        color: #183247;
+        font-weight: 700;
+    }
+
+    .timer-primary-link:hover,
+    .timer-primary-link:focus {
+        color: #214c6c;
+    }
+
+    .timer-structure-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: 0.45rem;
+        box-shadow: 0 4px 10px rgba(24, 50, 71, 0.12);
+    }
+
+    .timer-type-cell {
+        color: #314557;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .timer-time-cell {
+        color: #2f4355;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .timer-created-by-cell {
+        min-width: 9rem;
+    }
+
+    .timer-actions .btn {
+        border-radius: 8px;
+    }
+
+    .timer-countdown-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 7.75rem;
+        padding: 0.4rem 0.7rem;
+        border-radius: 999px;
+        background: #eef3f8;
+        color: #22435b;
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .timer-countdown-pill.is-soon {
+        background: #fff1db;
+        color: #9f5c00;
+    }
+
+    .timer-countdown-pill.is-imminent {
+        background: #ffe3c0;
+        color: #8b3c00;
+        box-shadow: inset 0 0 0 1px rgba(139, 60, 0, 0.12);
+    }
+
+    .timer-countdown-pill.is-elapsed {
+        background: #f7dfe2;
+        color: #9f2d3d;
+    }
+
+    .timerboard-table-shell .dataTables_length,
+    .timerboard-table-shell .dataTables_filter {
+        margin-bottom: 0.75rem;
+    }
+
+    .timerboard-table-shell .dataTables_info,
+    .timerboard-table-shell .dataTables_paginate {
+        padding-bottom: 0.5rem;
     }
 
     #batchTimerModal .batch-timer-row .form-group,
@@ -432,5 +717,21 @@
     #batchTimerModal .select2-dropdown,
     #editTimerModal .select2-dropdown {
         z-index: 2055;
+    }
+
+    @media (max-width: 767.98px) {
+        .timerboard-filters {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .timerboard-table-shell .dataTables_wrapper {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        .timer-countdown-pill {
+            min-width: auto;
+        }
     }
 </style>

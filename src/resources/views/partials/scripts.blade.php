@@ -79,24 +79,51 @@
             };
         }
 
+        function getFilterDisplayText(selector) {
+            var $field = $(selector);
+
+            if ($field.is('select')) {
+                if (!normalizeNotes($field.val())) {
+                    return '';
+                }
+
+                return normalizeNotes($field.find('option:selected').text());
+            }
+
+            return normalizeNotes($field.val());
+        }
+
         function updateFilterSummary() {
             var filters = getTimerFilterValues();
             var activeFilters = [];
+            var chips = [];
 
-            if (filters.structureType) activeFilters.push('type');
-            if (filters.tagId) activeFilters.push('tag');
-            if (filters.region) activeFilters.push('region');
-            if (filters.roleId) activeFilters.push('visibility');
-            if (filters.notes) activeFilters.push('notes');
-            if (filters.owner) activeFilters.push('owner');
-            if (filters.attacker) activeFilters.push('attacker');
-            if (filters.search) activeFilters.push('search');
+            function addFilter(label, value) {
+                if (!value) {
+                    return;
+                }
+
+                activeFilters.push(label);
+                chips.push('<span class="timer-filter-chip"><strong>' + escapeHtml(label) + ':</strong> ' + escapeHtml(value) + '</span>');
+            }
+
+            addFilter('Type', getFilterDisplayText('#filter_structure_type'));
+            addFilter('Tag', getFilterDisplayText('#filter_tag'));
+            addFilter('Region', getFilterDisplayText('#filter_region'));
+            addFilter('Visibility', getFilterDisplayText('#filter_role'));
+            addFilter('Notes', getFilterDisplayText('#filter_notes'));
+            addFilter('Owner', normalizeNotes($('#filter_owner').val()));
+            addFilter('Attacker', normalizeNotes($('#filter_attacker').val()));
+            addFilter('Search', normalizeNotes($('#filter_search').val()));
 
             $('#timer-filter-summary').text(
                 activeFilters.length
                     ? activeFilters.length + (activeFilters.length === 1 ? ' filter active.' : ' filters active.')
                     : 'No filters applied.'
             );
+
+            $('#timer-filter-chips').html(chips.join(''));
+            $('#timer-filter-chip-row').toggleClass('d-none', activeFilters.length === 0);
         }
 
         function updateFilterToggleButton(expanded) {
@@ -177,7 +204,7 @@
             var tagIds = String($row.attr('data-tag-ids') || '')
                 .split(',')
                 .filter(function(value) { return value !== ''; });
-            var rowText = normalizeNotes($row.text()).toLowerCase();
+            var rowText = normalizeNotes($row.clone().find('textarea').remove().end().text()).toLowerCase();
 
             if (filters.structureType && structureType !== filters.structureType.toLowerCase()) {
                 return false;
@@ -840,7 +867,11 @@
             "stateSave": true,
             "paging": true,
             "pageLength": 25,
-            "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ]
+            "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ],
+            "language": {
+                "emptyTable": "No timers have been added yet.",
+                "zeroRecords": "No timers match the current filters."
+            }
         });
 
         $('#timerboard-filters').on('input change', 'input, select', function() {
@@ -870,12 +901,15 @@
                 }
 
                 const countdownCell = row.querySelector('.countdown');
+                countdownCell.classList.remove('is-soon', 'is-imminent', 'is-elapsed');
+                row.classList.remove('is-soon', 'is-imminent', 'is-elapsed');
+
                 if (diff <= 0) {
                     countdownCell.textContent = 'ELAPSED';
-                    countdownCell.classList.remove('text-warning');
-                    countdownCell.classList.add('text-danger');
+                    countdownCell.classList.add('is-elapsed');
                     row.classList.remove('active-timer');
                     row.classList.add('static-timer');
+                    row.classList.add('is-elapsed');
                 } else {
                     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -889,8 +923,12 @@
 
                     countdownCell.textContent = countdownStr;
 
-                    if (days == 0 && hours < 4) {
-                        countdownCell.classList.add('text-warning');
+                    if (diff <= (4 * 60 * 60 * 1000)) {
+                        countdownCell.classList.add('is-imminent');
+                        row.classList.add('is-imminent');
+                    } else if (diff <= (24 * 60 * 60 * 1000)) {
+                        countdownCell.classList.add('is-soon');
+                        row.classList.add('is-soon');
                     }
                 }
             });
@@ -904,6 +942,13 @@
                 const localTimeCell = row.querySelector('.local-time');
                 if (localTimeCell && localTimeCell.textContent === 'Calculating...') {
                     localTimeCell.textContent = eveTime.toLocaleString();
+                }
+
+                row.classList.add('is-elapsed');
+
+                const countdownCell = row.querySelector('.countdown');
+                if (countdownCell) {
+                    countdownCell.classList.add('is-elapsed');
                 }
             });
         }

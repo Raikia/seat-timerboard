@@ -4,14 +4,56 @@
 @section('page_header', 'Timerboard')
 
 @section('content')
+    @php
+        $currentCount = $currentTimers->count();
+        $elapsedCount = $elapsedTimers->count();
+        $noteCount = $currentTimers->merge($elapsedTimers)->filter(function ($timer) {
+            return filled($timer->notes);
+        })->count();
+        $urgentCount = $currentTimers->filter(function ($timer) {
+            return $timer->eve_time->isFuture() && $timer->eve_time->lte(now()->copy()->addDay());
+        })->count();
+    @endphp
+
     <div class="card">
-        <div class="card-header p-2">
-            <ul class="nav nav-pills">
-                <li class="nav-item"><a class="nav-link active" href="#current" data-toggle="tab">Current</a></li>
-                <li class="nav-item"><a class="nav-link" href="#elapsed" data-toggle="tab">Elapsed</a></li>
-            </ul>
-        </div>
         <div class="card-body">
+            <div class="timerboard-toolbar">
+                <div class="timerboard-toolbar-copy">
+                    <h5 class="mb-1">Timer Overview</h5>
+                    <small class="text-muted">Current timers, urgent windows, saved notes, and elapsed references in one place.</small>
+                </div>
+                <div class="timerboard-toolbar-actions">
+                    @can('seat-timerboard.create')
+                        <button type="button" class="btn btn-primary timerboard-primary-action" id="create-timer-btn">
+                            <i class="fas fa-plus"></i> Add Timers
+                        </button>
+                    @endcan
+                </div>
+            </div>
+
+            <div class="timerboard-stats">
+                <div class="timerboard-stat-card">
+                    <span class="timerboard-stat-label">Current</span>
+                    <strong class="timerboard-stat-value">{{ $currentCount }}</strong>
+                    <span class="timerboard-stat-meta">Timers still in play</span>
+                </div>
+                <div class="timerboard-stat-card is-urgent">
+                    <span class="timerboard-stat-label">Next 24h</span>
+                    <strong class="timerboard-stat-value">{{ $urgentCount }}</strong>
+                    <span class="timerboard-stat-meta">High-attention windows</span>
+                </div>
+                <div class="timerboard-stat-card">
+                    <span class="timerboard-stat-label">Saved Notes</span>
+                    <strong class="timerboard-stat-value">{{ $noteCount }}</strong>
+                    <span class="timerboard-stat-meta">Timers with context attached</span>
+                </div>
+                <div class="timerboard-stat-card">
+                    <span class="timerboard-stat-label">Elapsed</span>
+                    <strong class="timerboard-stat-value">{{ $elapsedCount }}</strong>
+                    <span class="timerboard-stat-meta">Past the 2-hour buffer</span>
+                </div>
+            </div>
+
             <div class="timerboard-filters mb-3" id="timerboard-filters">
                 <div class="timerboard-filters-header">
                     <div>
@@ -27,6 +69,9 @@
                             <i class="fas fa-undo"></i> Clear
                         </button>
                     </div>
+                </div>
+                <div class="timer-filter-chip-row d-none" id="timer-filter-chip-row">
+                    <div class="timer-filter-chips" id="timer-filter-chips"></div>
                 </div>
                 <div class="collapse" id="timerboard-filters-body">
                     <div class="form-row">
@@ -92,193 +137,213 @@
                     </div>
                 </div>
             </div>
+
+            <div class="timerboard-tabs">
+                <ul class="nav nav-pills">
+                    <li class="nav-item"><a class="nav-link active" href="#current" data-toggle="tab">Current</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#elapsed" data-toggle="tab">Elapsed</a></li>
+                </ul>
+            </div>
+
             <div class="tab-content">
                 <div class="tab-pane active" id="current">
-                    <div class="mb-2 d-flex justify-content-between align-items-center">
-                        @can('seat-timerboard.create')
-                        <button type="button" class="btn btn-primary btn-sm" id="create-timer-btn">
-                            <i class="fas fa-plus"></i> Add Timers
-                        </button>
-                        @endcan
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle"></i> Timers remain in "Current" for 2 hours after elapsing.
-                        </small>
+                    <div class="timerboard-section-header">
+                        <div>
+                            <h5 class="mb-1">Current Timers</h5>
+                            <small class="text-muted">Upcoming windows plus anything that elapsed within the last 2 hours.</small>
+                        </div>
+                        <span class="timerboard-section-pill">
+                            <i class="fas fa-info-circle"></i> Grace window: 2 hours
+                        </span>
                     </div>
-                    <table class="table table-hover table-striped timers-table" id="current-timers-table">
-                        <thead>
-                            <tr>
-                                <th>System</th>
-                                <th>Type</th>
-                                <th>Name</th>
-                                <th>Owner</th>
-                                <th>Attacker</th>
-                                <th>Eve Time (UTC)</th>
-                                <th>Local Time</th>
-                                <th>Countdown</th>
-                                <th>Tags</th>
-                                <th>Created By</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($currentTimers as $timer)
-                                <tr class="timer-row active-timer"
-                                    data-time="{{ $timer->eve_time->toIso8601String() }}"
-                                    data-structure-type="{{ $timer->structure_type }}"
-                                    data-region="{{ $timer->getRegionName() }}"
-                                    data-owner="{{ $timer->owner_corporation }}"
-                                    data-attacker="{{ $timer->attacker_corporation }}"
-                                    data-role-id="{{ $timer->role ? $timer->role->id : 'public' }}"
-                                    data-tag-ids="{{ $timer->tags->pluck('id')->implode(',') }}"
-                                    data-has-notes="{{ filled($timer->notes) ? '1' : '0' }}">
-                                    <td>
-                                        @if($timer->getDotlanMapUrl())
-                                            <a href="{{ $timer->getDotlanMapUrl() }}" target="_blank">
-                                                {{ $timer->system }}
-                                            </a>
-                                        @else
-                                            {{ $timer->system }}
-                                        @endif
-                                        <br>
-                                        <span class="text-muted small">
-                                            {{ $timer->getRegionName() }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <img src="{{ $timer->getStructureImage() }}" alt="{{ $timer->structure_type }}" class="img-circle" style="width: 24px; height: 24px; margin-right: 5px;">
-                                        {{ $timer->structure_type }}
-                                    </td>
-                                    <td>@include('seat-timerboard::partials.timer_name', ['timer' => $timer])</td>
-                                    <td>{{ $timer->owner_corporation }}</td>
-                                    <td>{{ $timer->attacker_corporation }}</td>
-                                    <td>{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
-                                    <td class="local-time" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
-                                    <td class="countdown font-weight-bold">Calculating...</td>
-                                    <td>
-                                        @foreach($timer->tags as $tag)
-                                            <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
-                                        @endforeach
-                                    </td>
-                                    <td>
-                                        {{ $timer->user->name ?? 'Unknown' }}
-                                        <br>
-                                        <span class="text-muted small">
-                                            {{ $timer->role ? $timer->role->title : 'Public' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            @can('seat-timerboard.edit')
-                                                <button type="button" class="btn btn-warning edit-timer-btn" title="Edit"
-                                                    data-timer='@json($timer)'
-                                                    data-tags='@json($timer->tags->pluck("id"))'>
-                                                    <i class="fas fa-pencil-alt"></i>
-                                                </button>
-                                            @endcan
-                                            @can('seat-timerboard.delete')
-                                                <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
-                                                    {{ csrf_field() }}
-                                                    {{ method_field('DELETE') }}
-                                                    <button type="submit" class="btn btn-danger" title="Delete">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            @endcan
-                                        </div>
-                                    </td>
+                    <div class="timerboard-table-shell">
+                        <table class="table table-hover table-striped timers-table" id="current-timers-table">
+                            <thead>
+                                <tr>
+                                    <th>System</th>
+                                    <th>Type</th>
+                                    <th>Name</th>
+                                    <th>Owner</th>
+                                    <th>Attacker</th>
+                                    <th>Eve Time (UTC)</th>
+                                    <th>Local Time</th>
+                                    <th>Countdown</th>
+                                    <th>Tags</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach($currentTimers as $timer)
+                                    <tr class="timer-row active-timer"
+                                        data-time="{{ $timer->eve_time->toIso8601String() }}"
+                                        data-structure-type="{{ $timer->structure_type }}"
+                                        data-region="{{ $timer->getRegionName() }}"
+                                        data-owner="{{ $timer->owner_corporation }}"
+                                        data-attacker="{{ $timer->attacker_corporation }}"
+                                        data-role-id="{{ $timer->role ? $timer->role->id : 'public' }}"
+                                        data-tag-ids="{{ $timer->tags->pluck('id')->implode(',') }}"
+                                        data-has-notes="{{ filled($timer->notes) ? '1' : '0' }}">
+                                        <td class="timer-system-cell">
+                                            @if($timer->getDotlanMapUrl())
+                                                <a href="{{ $timer->getDotlanMapUrl() }}" target="_blank" class="timer-primary-link">
+                                                    {{ $timer->system }}
+                                                </a>
+                                            @else
+                                                <span class="font-weight-semibold">{{ $timer->system }}</span>
+                                            @endif
+                                            <br>
+                                            <span class="text-muted small">
+                                                {{ $timer->getRegionName() }}
+                                            </span>
+                                        </td>
+                                        <td class="timer-type-cell">
+                                            <img src="{{ $timer->getStructureImage() }}" alt="{{ $timer->structure_type }}" class="img-circle timer-structure-icon">
+                                            <span>{{ $timer->structure_type }}</span>
+                                        </td>
+                                        <td>@include('seat-timerboard::partials.timer_name', ['timer' => $timer])</td>
+                                        <td>{{ $timer->owner_corporation }}</td>
+                                        <td>{{ $timer->attacker_corporation }}</td>
+                                        <td class="timer-time-cell">{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
+                                        <td class="local-time timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
+                                        <td><span class="countdown timer-countdown-pill">Calculating...</span></td>
+                                        <td>
+                                            @foreach($timer->tags as $tag)
+                                                <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
+                                            @endforeach
+                                        </td>
+                                        <td class="timer-created-by-cell">
+                                            {{ $timer->user->name ?? 'Unknown' }}
+                                            <br>
+                                            <span class="text-muted small">
+                                                {{ $timer->role ? $timer->role->title : 'Public' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm timer-actions">
+                                                @can('seat-timerboard.edit')
+                                                    <button type="button" class="btn btn-warning edit-timer-btn" title="Edit"
+                                                        data-timer='@json($timer)'
+                                                        data-tags='@json($timer->tags->pluck("id"))'>
+                                                        <i class="fas fa-pencil-alt"></i>
+                                                    </button>
+                                                @endcan
+                                                @can('seat-timerboard.delete')
+                                                    <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
+                                                        {{ csrf_field() }}
+                                                        {{ method_field('DELETE') }}
+                                                        <button type="submit" class="btn btn-danger" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                @endcan
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <!-- /.tab-pane -->
                 <div class="tab-pane" id="elapsed">
-                    <table class="table table-hover table-striped timers-table" id="elapsed-timers-table">
-                        <thead>
-                            <tr>
-                                <th>System</th>
-                                <th>Type</th>
-                                <th>Name</th>
-                                <th>Owner</th>
-                                <th>Attacker</th>
-                                <th>Eve Time (UTC)</th>
-                                <th>Local Time</th>
-                                <th>Countdown</th>
-                                <th>Tags</th>
-                                <th>Created By</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($elapsedTimers as $timer)
-                                <tr class="timer-row static-timer"
-                                    data-time="{{ $timer->eve_time->toIso8601String() }}"
-                                    data-structure-type="{{ $timer->structure_type }}"
-                                    data-region="{{ $timer->getRegionName() }}"
-                                    data-owner="{{ $timer->owner_corporation }}"
-                                    data-attacker="{{ $timer->attacker_corporation }}"
-                                    data-role-id="{{ $timer->role ? $timer->role->id : 'public' }}"
-                                    data-tag-ids="{{ $timer->tags->pluck('id')->implode(',') }}"
-                                    data-has-notes="{{ filled($timer->notes) ? '1' : '0' }}">
-                                    <td>
-                                        @if($timer->getDotlanMapUrl())
-                                            <a href="{{ $timer->getDotlanMapUrl() }}" target="_blank">
-                                                {{ $timer->system }}
-                                            </a>
-                                        @else
-                                            {{ $timer->system }}
-                                        @endif
-                                        <br>
-                                        <span class="text-muted small">
-                                            {{ $timer->getRegionName() }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <img src="{{ $timer->getStructureImage() }}" alt="{{ $timer->structure_type }}" class="img-circle" style="width: 24px; height: 24px; margin-right: 5px;">
-                                        {{ $timer->structure_type }}
-                                    </td>
-                                    <td>@include('seat-timerboard::partials.timer_name', ['timer' => $timer])</td>
-                                    <td>{{ $timer->owner_corporation }}</td>
-                                    <td>{{ $timer->attacker_corporation }}</td>
-                                    <td>{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
-                                    <td class="local-time" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
-                                    <td class="countdown font-weight-bold text-danger">ELAPSED</td>
-                                    <td>
-                                        @foreach($timer->tags as $tag)
-                                            <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
-                                        @endforeach
-                                    </td>
-                                    <td>
-                                        {{ $timer->user->name ?? 'Unknown' }}
-                                        <br>
-                                        <span class="text-muted small">
-                                            {{ $timer->role ? $timer->role->title : 'Public' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            @can('seat-timerboard.edit')
-                                                <button type="button" class="btn btn-warning edit-timer-btn" title="Edit"
-                                                    data-timer='@json($timer)'
-                                                    data-tags='@json($timer->tags->pluck("id"))'>
-                                                    <i class="fas fa-pencil-alt"></i>
-                                                </button>
-                                            @endcan
-                                            @can('seat-timerboard.delete')
-                                                <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
-                                                    {{ csrf_field() }}
-                                                    {{ method_field('DELETE') }}
-                                                    <button type="submit" class="btn btn-danger" title="Delete">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                            @endcan
-                                        </div>
-                                    </td>
+                    <div class="timerboard-section-header">
+                        <div>
+                            <h5 class="mb-1">Elapsed Timers</h5>
+                            <small class="text-muted">Older timers kept around for reference once they are outside the grace window.</small>
+                        </div>
+                        <span class="timerboard-section-pill is-muted">
+                            <i class="far fa-clock"></i> Reference queue
+                        </span>
+                    </div>
+                    <div class="timerboard-table-shell is-muted">
+                        <table class="table table-hover table-striped timers-table" id="elapsed-timers-table">
+                            <thead>
+                                <tr>
+                                    <th>System</th>
+                                    <th>Type</th>
+                                    <th>Name</th>
+                                    <th>Owner</th>
+                                    <th>Attacker</th>
+                                    <th>Eve Time (UTC)</th>
+                                    <th>Local Time</th>
+                                    <th>Countdown</th>
+                                    <th>Tags</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach($elapsedTimers as $timer)
+                                    <tr class="timer-row static-timer"
+                                        data-time="{{ $timer->eve_time->toIso8601String() }}"
+                                        data-structure-type="{{ $timer->structure_type }}"
+                                        data-region="{{ $timer->getRegionName() }}"
+                                        data-owner="{{ $timer->owner_corporation }}"
+                                        data-attacker="{{ $timer->attacker_corporation }}"
+                                        data-role-id="{{ $timer->role ? $timer->role->id : 'public' }}"
+                                        data-tag-ids="{{ $timer->tags->pluck('id')->implode(',') }}"
+                                        data-has-notes="{{ filled($timer->notes) ? '1' : '0' }}">
+                                        <td class="timer-system-cell">
+                                            @if($timer->getDotlanMapUrl())
+                                                <a href="{{ $timer->getDotlanMapUrl() }}" target="_blank" class="timer-primary-link">
+                                                    {{ $timer->system }}
+                                                </a>
+                                            @else
+                                                <span class="font-weight-semibold">{{ $timer->system }}</span>
+                                            @endif
+                                            <br>
+                                            <span class="text-muted small">
+                                                {{ $timer->getRegionName() }}
+                                            </span>
+                                        </td>
+                                        <td class="timer-type-cell">
+                                            <img src="{{ $timer->getStructureImage() }}" alt="{{ $timer->structure_type }}" class="img-circle timer-structure-icon">
+                                            <span>{{ $timer->structure_type }}</span>
+                                        </td>
+                                        <td>@include('seat-timerboard::partials.timer_name', ['timer' => $timer])</td>
+                                        <td>{{ $timer->owner_corporation }}</td>
+                                        <td>{{ $timer->attacker_corporation }}</td>
+                                        <td class="timer-time-cell">{{ $timer->eve_time->format('Y-m-d H:i:s') }}</td>
+                                        <td class="local-time timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">Calculating...</td>
+                                        <td><span class="countdown timer-countdown-pill is-elapsed">ELAPSED</span></td>
+                                        <td>
+                                            @foreach($timer->tags as $tag)
+                                                <span class="badge" style="background-color: {{ $tag->color }}; color: #fff;">{{ $tag->name }}</span>
+                                            @endforeach
+                                        </td>
+                                        <td class="timer-created-by-cell">
+                                            {{ $timer->user->name ?? 'Unknown' }}
+                                            <br>
+                                            <span class="text-muted small">
+                                                {{ $timer->role ? $timer->role->title : 'Public' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm timer-actions">
+                                                @can('seat-timerboard.edit')
+                                                    <button type="button" class="btn btn-warning edit-timer-btn" title="Edit"
+                                                        data-timer='@json($timer)'
+                                                        data-tags='@json($timer->tags->pluck("id"))'>
+                                                        <i class="fas fa-pencil-alt"></i>
+                                                    </button>
+                                                @endcan
+                                                @can('seat-timerboard.delete')
+                                                    <form action="{{ route('timerboard.destroy', $timer->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this timer?');">
+                                                        {{ csrf_field() }}
+                                                        {{ method_field('DELETE') }}
+                                                        <button type="submit" class="btn btn-danger" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                @endcan
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <!-- /.tab-pane -->
             </div>
