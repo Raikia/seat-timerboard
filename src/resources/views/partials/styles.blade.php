@@ -769,6 +769,10 @@
         --timerboard-dark-text-secondary: #f5f9fd;
         --timerboard-dark-text-muted: #9fb0c3;
         --timerboard-dark-text-soft: #b9c8d6;
+        --timerboard-dark-summary-bg: rgba(122, 167, 211, 0.18);
+        --timerboard-dark-summary-text: #f5f9fd;
+        --timerboard-dark-summary-placeholder-bg: rgba(174, 192, 210, 0.14);
+        --timerboard-dark-summary-placeholder-text: #d6e3f0;
         --timerboard-dark-surface: #2a3441;
         --timerboard-dark-surface-alt: #313d4b;
         --timerboard-dark-surface-soft: #252f3a;
@@ -800,6 +804,10 @@
         --timerboard-dark-text-secondary: var(--color-text-secondary, #f5f9fd);
         --timerboard-dark-text-muted: var(--color-text-tertiary, #9fb0c3);
         --timerboard-dark-text-soft: var(--color-text-tertiary, #b9c8d6);
+        --timerboard-dark-summary-bg: rgba(122, 167, 211, 0.18);
+        --timerboard-dark-summary-text: var(--color-text-secondary, #f5f9fd);
+        --timerboard-dark-summary-placeholder-bg: rgba(174, 192, 210, 0.14);
+        --timerboard-dark-summary-placeholder-text: var(--color-text-primary, #d6e3f0);
         --timerboard-dark-surface: var(--color-background-secondary, #2a3441);
         --timerboard-dark-surface-alt: var(--color-background-tertiary, #313d4b);
         --timerboard-dark-surface-soft: var(--color-background-secondary, #252f3a);
@@ -897,23 +905,35 @@
 
     body.dark-mode .timer-filter-chip,
     body.dark-mode .timerboard-section-pill,
-    body.dark-mode .batch-summary-pill,
     body.dark-mode .edit-note-trigger,
     .timerboard-dark-skin .timer-filter-chip,
     .timerboard-dark-skin .timerboard-section-pill,
-    .timerboard-dark-skin .batch-summary-pill,
     .timerboard-dark-skin .edit-note-trigger {
         background: var(--timerboard-dark-chip-bg);
         color: var(--timerboard-dark-text);
         border-color: var(--timerboard-dark-chip-border);
     }
 
+    body.dark-mode #batchTimerModal .batch-summary-pill,
+    #batchTimerModal.timerboard-dark-skin .batch-summary-pill {
+        background: var(--timerboard-dark-summary-bg);
+        color: var(--timerboard-dark-summary-text);
+        border-color: rgba(122, 167, 211, 0.28);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
     body.dark-mode .timerboard-section-pill.is-muted,
-    body.dark-mode .batch-summary-pill.is-placeholder,
     .timerboard-dark-skin .timerboard-section-pill.is-muted,
     .timerboard-dark-skin .batch-summary-pill.is-placeholder {
         background: rgba(174, 192, 210, 0.1);
         color: var(--timerboard-dark-text-muted);
+    }
+
+    body.dark-mode #batchTimerModal .batch-summary-pill.is-placeholder,
+    #batchTimerModal.timerboard-dark-skin .batch-summary-pill.is-placeholder {
+        background: var(--timerboard-dark-summary-placeholder-bg);
+        color: var(--timerboard-dark-summary-placeholder-text);
+        border-color: rgba(174, 192, 210, 0.2);
     }
 
     body.dark-mode .timer-note-trigger,
@@ -1269,17 +1289,29 @@
 
     .timerboard-skin-jet .timer-filter-chip,
     .timerboard-skin-jet .timerboard-section-pill,
-    .timerboard-skin-jet .batch-summary-pill,
     .timerboard-skin-jet .edit-note-trigger {
         background: rgba(168, 153, 132, 0.16);
         color: #ebdbb2;
         border-color: rgba(168, 153, 132, 0.24);
     }
 
+    #batchTimerModal.timerboard-skin-jet .batch-summary-pill {
+        background: rgba(254, 128, 25, 0.22);
+        color: #fbf1c7;
+        border-color: rgba(254, 128, 25, 0.28);
+        box-shadow: inset 0 0 0 1px rgba(251, 241, 199, 0.06);
+    }
+
     .timerboard-skin-jet .timerboard-section-pill.is-muted,
     .timerboard-skin-jet .batch-summary-pill.is-placeholder {
         background: rgba(146, 131, 116, 0.18);
         color: #d5c4a1;
+    }
+
+    #batchTimerModal.timerboard-skin-jet .batch-summary-pill.is-placeholder {
+        background: rgba(168, 153, 132, 0.2);
+        color: #ebdbb2;
+        border-color: rgba(168, 153, 132, 0.22);
     }
 
     .timerboard-skin-jet .timer-note-trigger {
