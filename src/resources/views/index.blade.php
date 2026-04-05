@@ -163,7 +163,7 @@
                         </span>
                     </div>
                     <div class="timerboard-table-shell">
-                        <table class="table table-hover table-striped timers-table" id="current-timers-table">
+                        <table class="table table-hover timers-table" id="current-timers-table">
                             <thead>
                                 <tr>
                                     <th>System</th>
@@ -210,8 +210,8 @@
                                         <td>@include('seat-timerboard::partials.timer_name', ['timer' => $timer])</td>
                                         <td>{{ $timer->owner_corporation }}</td>
                                         <td>{{ $timer->attacker_corporation }}</td>
-                                        <td class="timer-time-cell">
-                                            <div class="timer-time-primary">{{ $timer->eve_time->copy()->timezone('UTC')->format('l \\@ g:ia') }}</div>
+                                        <td class="timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">
+                                            <div class="timer-time-primary">{{ $timer->eve_time->copy()->timezone('UTC')->format('l \\@ H:i') }}</div>
                                             <div class="timer-time-secondary">{{ $timer->eve_time->copy()->timezone('UTC')->format('n/j/Y') }}</div>
                                         </td>
                                         <td class="local-time timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">
@@ -269,7 +269,7 @@
                         </span>
                     </div>
                     <div class="timerboard-table-shell is-muted">
-                        <table class="table table-hover table-striped timers-table" id="elapsed-timers-table">
+                        <table class="table table-hover timers-table" id="elapsed-timers-table">
                             <thead>
                                 <tr>
                                     <th>System</th>
@@ -316,8 +316,8 @@
                                         <td>@include('seat-timerboard::partials.timer_name', ['timer' => $timer])</td>
                                         <td>{{ $timer->owner_corporation }}</td>
                                         <td>{{ $timer->attacker_corporation }}</td>
-                                        <td class="timer-time-cell">
-                                            <div class="timer-time-primary">{{ $timer->eve_time->copy()->timezone('UTC')->format('l \\@ g:ia') }}</div>
+                                        <td class="timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">
+                                            <div class="timer-time-primary">{{ $timer->eve_time->copy()->timezone('UTC')->format('l \\@ H:i') }}</div>
                                             <div class="timer-time-secondary">{{ $timer->eve_time->copy()->timezone('UTC')->format('n/j/Y') }}</div>
                                         </td>
                                         <td class="local-time timer-time-cell" data-order="{{ $timer->eve_time->timestamp }}">

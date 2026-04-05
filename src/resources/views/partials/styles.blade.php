@@ -308,16 +308,16 @@
     }
 
     .timer-row.is-soon {
-        background: rgba(255, 248, 235, 0.55);
+        background: transparent;
     }
 
     .timer-row.is-imminent {
-        background: rgba(255, 241, 226, 0.92);
-        box-shadow: inset 4px 0 0 #d9822b;
+        background: transparent;
+        box-shadow: none;
     }
 
     .timer-row.static-timer {
-        background: rgba(248, 250, 252, 0.82);
+        background: transparent;
     }
 
     .timer-primary-link,
@@ -966,25 +966,20 @@
         border-top-color: var(--timerboard-dark-border-subtle);
     }
 
-    body.dark-mode .table-striped tbody tr:nth-of-type(odd),
-    .timerboard-dark-skin .table-striped tbody tr:nth-of-type(odd) {
-        background-color: var(--timerboard-dark-row-alt);
-    }
-
     body.dark-mode .timer-row.is-soon,
     .timerboard-dark-skin .timer-row.is-soon {
-        background: var(--timerboard-dark-row-soon);
+        background: transparent;
     }
 
     body.dark-mode .timer-row.is-imminent,
     .timerboard-dark-skin .timer-row.is-imminent {
-        background: var(--timerboard-dark-row-imminent);
-        box-shadow: inset 4px 0 0 var(--timerboard-dark-accent);
+        background: transparent;
+        box-shadow: none;
     }
 
     body.dark-mode .timer-row.static-timer,
     .timerboard-dark-skin .timer-row.static-timer {
-        background: var(--timerboard-dark-row-static);
+        background: transparent;
     }
 
     body.dark-mode .timer-countdown-pill,
@@ -1324,21 +1319,17 @@
         border-top-color: #7c6f64;
     }
 
-    .timerboard-skin-jet .table-striped tbody tr:nth-of-type(odd) {
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-
     .timerboard-skin-jet .timer-row.is-soon {
-        background: rgba(215, 153, 33, 0.12);
+        background: transparent;
     }
 
     .timerboard-skin-jet .timer-row.is-imminent {
-        background: rgba(204, 36, 29, 0.16);
-        box-shadow: inset 4px 0 0 #d79921;
+        background: transparent;
+        box-shadow: none;
     }
 
     .timerboard-skin-jet .timer-row.static-timer {
-        background: rgba(255, 255, 255, 0.03);
+        background: transparent;
     }
 
     .timerboard-skin-jet .timer-countdown-pill {

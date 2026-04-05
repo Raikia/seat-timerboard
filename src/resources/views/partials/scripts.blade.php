@@ -388,9 +388,10 @@
         function formatDisplayDateTime(date) {
             var weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
             var time = date.toLocaleTimeString(undefined, {
-                hour: 'numeric',
-                minute: '2-digit'
-            }).toLowerCase().replace(/\s/g, '');
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
             var displayDate = date.toLocaleDateString(undefined, {
                 year: 'numeric',
                 month: 'numeric',
@@ -892,6 +893,8 @@
         var timerTables = $('.timers-table').DataTable({
             "order": [[ 5, "asc" ]],
             "columnDefs": [
+                { "targets": 6, "orderData": [5] },
+                { "targets": 7, "orderData": [5] },
                 { "orderable": false, "targets": [8, 10] }
             ],
             "stateSave": true,
