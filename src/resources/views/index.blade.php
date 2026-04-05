@@ -6,10 +6,9 @@
 @section('content')
     @php
         $activeSkin = setting('skin') ?: 'default';
-        $timerboardSkinClasses = 'timerboard-skin-' . $activeSkin;
-        if (in_array($activeSkin, ['jet', 'iuligigi', 'gigigraphite'], true)) {
-            $timerboardSkinClasses .= ' timerboard-dark-skin';
-        }
+        $timerboardThemeClasses = in_array($activeSkin, ['jet', 'iuligigi', 'gigigraphite'], true)
+            ? 'timerboard-dark-skin'
+            : '';
         $currentCount = $currentTimers->count();
         $elapsedCount = $elapsedTimers->count();
         $noteCount = $currentTimers->merge($elapsedTimers)->filter(function ($timer) {
@@ -20,7 +19,7 @@
         })->count();
     @endphp
 
-    <div class="card {{ $timerboardSkinClasses }}">
+    <div class="card timerboard-shell {{ $timerboardThemeClasses }}">
         <div class="card-body">
             <div class="timerboard-toolbar">
                 <div class="timerboard-toolbar-copy">
@@ -370,7 +369,7 @@
     </div>
 
     @can('seat-timerboard.create')
-        <div class="modal fade {{ $timerboardSkinClasses }}" id="batchTimerModal" tabindex="-1" role="dialog" aria-labelledby="batchTimerModalLabel" aria-hidden="true">
+        <div class="modal fade timerboard-modal timerboard-form-modal timerboard-batch-modal {{ $timerboardThemeClasses }}" id="batchTimerModal" tabindex="-1" role="dialog" aria-labelledby="batchTimerModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-xl" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -514,7 +513,7 @@
         </script>
     @endcan
 
-    <div class="modal fade {{ $timerboardSkinClasses }}" id="timerNoteModal" tabindex="-1" role="dialog" aria-labelledby="timerNoteModalLabel" aria-hidden="true">
+    <div class="modal fade timerboard-modal timerboard-note-modal {{ $timerboardThemeClasses }}" id="timerNoteModal" tabindex="-1" role="dialog" aria-labelledby="timerNoteModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -559,7 +558,7 @@
         </div>
     </div>
 
-    <div class="modal fade {{ $timerboardSkinClasses }}" id="editTimerModal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel" aria-hidden="true">
+    <div class="modal fade timerboard-modal timerboard-form-modal timerboard-edit-modal {{ $timerboardThemeClasses }}" id="editTimerModal" tabindex="-1" role="dialog" aria-labelledby="editTimerModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
