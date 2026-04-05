@@ -407,6 +407,7 @@ class TimerboardController extends Controller
             'POCO' => 'Customs Office',
             'Fortizar' => 'Fortizar',
             'Keepstar' => 'Keepstar',
+            'Mercenary Den' => 'Mercenary Den',
             'Metenox' => 'Metenox Moon Drill',
             'Pharolux' => 'Pharolux Cyno Beacon',
             'POS' => 'POS',

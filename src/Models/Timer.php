@@ -56,6 +56,7 @@ class Timer extends Model
             'POCO' => 2233,
             'Fortizar' => 35833,
             'Keepstar' => 35834,
+            'Mercenary Den' => 85230,
             'Metenox' => 81826,
             'Pharolux' => 35840,
             'POS' => 16213,
