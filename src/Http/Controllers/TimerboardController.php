@@ -413,6 +413,7 @@ class TimerboardController extends Controller
             'POS' => 'POS',
             'Raitaru' => 'Raitaru',
             'Skyhook' => 'Skyhook',
+            'Sovereignty Hub' => 'Sovereignty Hub',
             'Sotiyo' => 'Sotiyo',
             'Tatara' => 'Tatara',
             'Tenebrex' => 'Tenebrex Jammer',

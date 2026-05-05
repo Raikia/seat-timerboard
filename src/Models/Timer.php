@@ -62,6 +62,7 @@ class Timer extends Model
             'POS' => 16213,
             'Raitaru' => 35825,
             'Skyhook' => 81824, 
+            'Sovereignty Hub' => 32458,
             'Sotiyo' => 35827,
             'Tatara' => 35836,
             'Tenebrex' => 37534,
