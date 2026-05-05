@@ -4,6 +4,7 @@
         var availableTags = @json($timerTagOptions);
         var availableRoles = @json($timerRoleOptions);
         var defaultRoleId = @json($defaultRoleId);
+        var localTimeFormat = @json($localTimeFormat);
         var batchOldTimers = @json($batchOldTimers);
         var batchHadErrors = @json($batchHadErrors);
         var editHadErrors = @json($editHadErrors);
@@ -387,7 +388,12 @@
 
         function formatDisplayDateTime(date) {
             var weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
-            var time = date.toLocaleTimeString(undefined, {
+            var useAmPm = localTimeFormat === 'ampm';
+            var time = date.toLocaleTimeString(undefined, useAmPm ? {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            } : {
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false

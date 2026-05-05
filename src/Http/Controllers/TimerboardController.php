@@ -46,6 +46,7 @@ class TimerboardController extends Controller
         $roles = \Seat\Web\Models\Acl\Role::all();
         $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
         $defaultRoleId = $defaultRole ? $defaultRole->value : null;
+        $localTimeFormat = optional(\Raikia\SeatTimerboard\Models\TimerboardSetting::find('local_time_format'))->value ?? '24h';
         $structureTypes = $this->getStructureTypes();
         $filterRegions = $allTimers->map(function ($timer) {
             return $timer->getRegionName();
@@ -57,6 +58,7 @@ class TimerboardController extends Controller
             'tags',
             'roles',
             'defaultRoleId',
+            'localTimeFormat',
             'structureTypes',
             'filterRegions'
         ));

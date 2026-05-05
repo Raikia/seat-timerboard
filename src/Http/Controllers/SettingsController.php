@@ -14,6 +14,7 @@ class SettingsController extends Controller
         $roles = \Seat\Web\Models\Acl\Role::all();
         $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
         $defaultRoleId = $defaultRole ? $defaultRole->value : null;
+        $localTimeFormat = optional(\Raikia\SeatTimerboard\Models\TimerboardSetting::find('local_time_format'))->value ?? '24h';
 
         $notifEnabled = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_enabled');
         $notificationEnabled = $notifEnabled ? filter_var($notifEnabled->value, FILTER_VALIDATE_BOOLEAN) : false;
@@ -21,7 +22,14 @@ class SettingsController extends Controller
         $notifRoles = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_role_ids');
         $notificationRoleIds = $notifRoles ? json_decode($notifRoles->value, true) : [];
 
-        return view('seat-timerboard::settings', compact('tags', 'roles', 'defaultRoleId', 'notificationEnabled', 'notificationRoleIds'));
+        return view('seat-timerboard::settings', compact(
+            'tags',
+            'roles',
+            'defaultRoleId',
+            'localTimeFormat',
+            'notificationEnabled',
+            'notificationRoleIds'
+        ));
     }
 
     public function storeDefaultRole(Request $request)
@@ -36,6 +44,20 @@ class SettingsController extends Controller
         );
 
         return redirect()->route('timerboard.settings')->with('success', 'Default role updated successfully.');
+    }
+
+    public function storeDisplaySettings(Request $request)
+    {
+        $request->validate([
+            'local_time_format' => 'required|in:24h,ampm',
+        ]);
+
+        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+            ['setting' => 'local_time_format'],
+            ['value' => $request->input('local_time_format', '24h')]
+        );
+
+        return redirect()->route('timerboard.settings')->with('success', 'Display settings updated successfully.');
     }
 
     public function storeNotifications(Request $request)

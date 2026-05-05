@@ -58,6 +58,22 @@
                 <button type="submit" class="btn btn-primary mb-2">Save Default Role</button>
             </form>
             <small class="text-muted">Timers created will default to this role restricted visibility.</small>
+
+            <hr>
+
+            <h5 class="mb-3">Display</h5>
+            <form action="{{ route('timerboard.settings.display') }}" method="POST" class="form-inline">
+                {{ csrf_field() }}
+                <div class="form-group mb-2">
+                    <label for="local_time_format" class="mr-2">Local Time Format:</label>
+                    <select name="local_time_format" id="local_time_format" class="form-control mr-2">
+                        <option value="24h" {{ $localTimeFormat === '24h' ? 'selected' : '' }}>24-hour</option>
+                        <option value="ampm" {{ $localTimeFormat === 'ampm' ? 'selected' : '' }}>AM/PM</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary mb-2">Save Display Settings</button>
+            </form>
+            <small class="text-muted">This only affects the dashboard's Local Time column. Eve Time stays in UTC 24-hour format.</small>
         </div>
     </div>
 

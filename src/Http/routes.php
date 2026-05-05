@@ -69,6 +69,10 @@ Route::group([
             'as' => 'timerboard.settings.default-role',
             'uses' => 'SettingsController@storeDefaultRole',
         ]);
+        Route::post('/display', [
+            'as' => 'timerboard.settings.display',
+            'uses' => 'SettingsController@storeDisplaySettings',
+        ]);
         Route::post('/tags', [
             'as'   => 'timerboard.settings.tags.store',
             'uses' => 'SettingsController@storeTag',
