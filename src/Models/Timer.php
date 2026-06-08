@@ -61,7 +61,7 @@ class Timer extends Model
             'Pharolux' => 35840,
             'POS' => 16213,
             'Raitaru' => 35825,
-            'Skyhook' => 81824, 
+            'Skyhook' => 81080, 
             'Sovereignty Hub' => 32458,
             'Sotiyo' => 35827,
             'Tatara' => 35836,
