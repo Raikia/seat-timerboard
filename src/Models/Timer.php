@@ -18,7 +18,9 @@ class Timer extends Model
         'attacker_corporation',
         'eve_time',
         'user_id',
-        'role_id'
+        'role_id',
+        'import_fingerprint',
+        'source_notification_type',
     ];
 
     public function role()

@@ -5,6 +5,9 @@ namespace Raikia\SeatTimerboard\Http\Controllers;
 use Seat\Web\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Raikia\SeatTimerboard\Models\Tag;
+use Seat\Eveapi\Models\Alliances\Alliance;
+use Seat\Eveapi\Models\Corporation\CorporationInfo;
+use Seat\Eveapi\Models\Universe\UniverseName;
 
 class SettingsController extends Controller
 {
@@ -22,13 +25,20 @@ class SettingsController extends Controller
         $notifRoles = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_role_ids');
         $notificationRoleIds = $notifRoles ? json_decode($notifRoles->value, true) : [];
 
+        $trackedCorporationIds = $this->jsonSetting('tracked_corporation_ids');
+        $trackedAllianceIds = $this->jsonSetting('tracked_alliance_ids');
+        $trackedCorporations = $this->resolveTrackedCorporations($trackedCorporationIds);
+        $trackedAlliances = $this->resolveTrackedAlliances($trackedAllianceIds);
+
         return view('seat-timerboard::settings', compact(
             'tags',
             'roles',
             'defaultRoleId',
             'localTimeFormat',
             'notificationEnabled',
-            'notificationRoleIds'
+            'notificationRoleIds',
+            'trackedCorporations',
+            'trackedAlliances'
         ));
     }
 
@@ -58,6 +68,28 @@ class SettingsController extends Controller
         );
 
         return redirect()->route('timerboard.settings')->with('success', 'Display settings updated successfully.');
+    }
+
+    public function storeAutoImportSettings(Request $request)
+    {
+        $request->validate([
+            'tracked_corporation_ids' => 'nullable|array',
+            'tracked_corporation_ids.*' => 'integer',
+            'tracked_alliance_ids' => 'nullable|array',
+            'tracked_alliance_ids.*' => 'integer',
+        ]);
+
+        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+            ['setting' => 'tracked_corporation_ids'],
+            ['value' => json_encode(array_values(array_unique($request->input('tracked_corporation_ids', []))))]
+        );
+
+        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+            ['setting' => 'tracked_alliance_ids'],
+            ['value' => json_encode(array_values(array_unique($request->input('tracked_alliance_ids', []))))]
+        );
+
+        return redirect()->route('timerboard.settings')->with('success', 'Auto-import tracking updated successfully.');
     }
 
     public function storeNotifications(Request $request)
@@ -109,5 +141,129 @@ class SettingsController extends Controller
         $tag->delete();
 
         return redirect()->route('timerboard.settings')->with('success', 'Tag deleted successfully.');
+    }
+
+    public function searchCorporations(Request $request)
+    {
+        $query = trim((string) $request->input('q', ''));
+
+        if (strlen($query) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $escapedQuery = $this->escapeLike($query);
+
+        $results = CorporationInfo::player()
+            ->where('name', 'like', '%' . $escapedQuery . '%')
+            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['corporation_id', 'name'])
+            ->map(function ($corporation) {
+                return [
+                    'id' => $corporation->corporation_id,
+                    'text' => $corporation->name,
+                ];
+            })
+            ->values();
+
+        return response()->json(['results' => $results]);
+    }
+
+    public function searchAlliances(Request $request)
+    {
+        $query = trim((string) $request->input('q', ''));
+
+        if (strlen($query) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $escapedQuery = $this->escapeLike($query);
+
+        $results = Alliance::query()
+            ->where('name', 'like', '%' . $escapedQuery . '%')
+            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['alliance_id', 'name'])
+            ->map(function ($alliance) {
+                return [
+                    'id' => $alliance->alliance_id,
+                    'text' => $alliance->name,
+                ];
+            })
+            ->values();
+
+        return response()->json(['results' => $results]);
+    }
+
+    private function jsonSetting(string $key): array
+    {
+        $setting = \Raikia\SeatTimerboard\Models\TimerboardSetting::find($key);
+
+        if (!$setting || blank($setting->value)) {
+            return [];
+        }
+
+        return array_values(array_filter(json_decode($setting->value, true) ?: [], function ($value) {
+            return filled($value);
+        }));
+    }
+
+    private function resolveTrackedCorporations(array $corporationIds): array
+    {
+        if (empty($corporationIds)) {
+            return [];
+        }
+
+        $corporations = CorporationInfo::whereIn('corporation_id', $corporationIds)
+            ->get(['corporation_id', 'name'])
+            ->keyBy('corporation_id');
+
+        $fallbackNames = UniverseName::whereIn('entity_id', $corporationIds)
+            ->get(['entity_id', 'name'])
+            ->keyBy('entity_id');
+
+        return collect($corporationIds)->map(function ($corporationId) use ($corporations, $fallbackNames) {
+            $name = optional($corporations->get($corporationId))->name
+                ?? optional($fallbackNames->get($corporationId))->name
+                ?? 'Corporation #' . $corporationId;
+
+            return [
+                'id' => (int) $corporationId,
+                'text' => $name,
+            ];
+        })->values()->all();
+    }
+
+    private function resolveTrackedAlliances(array $allianceIds): array
+    {
+        if (empty($allianceIds)) {
+            return [];
+        }
+
+        $alliances = Alliance::whereIn('alliance_id', $allianceIds)
+            ->get(['alliance_id', 'name'])
+            ->keyBy('alliance_id');
+
+        $fallbackNames = UniverseName::whereIn('entity_id', $allianceIds)
+            ->get(['entity_id', 'name'])
+            ->keyBy('entity_id');
+
+        return collect($allianceIds)->map(function ($allianceId) use ($alliances, $fallbackNames) {
+            $name = optional($alliances->get($allianceId))->name
+                ?? optional($fallbackNames->get($allianceId))->name
+                ?? 'Alliance #' . $allianceId;
+
+            return [
+                'id' => (int) $allianceId,
+                'text' => $name,
+            ];
+        })->values()->all();
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return addcslashes($value, '\\%_');
     }
 }

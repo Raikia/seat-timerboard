@@ -73,6 +73,18 @@ Route::group([
             'as' => 'timerboard.settings.display',
             'uses' => 'SettingsController@storeDisplaySettings',
         ]);
+        Route::post('/auto-import', [
+            'as' => 'timerboard.settings.auto-import',
+            'uses' => 'SettingsController@storeAutoImportSettings',
+        ]);
+        Route::get('/search/corporations', [
+            'as' => 'timerboard.settings.search.corporations',
+            'uses' => 'SettingsController@searchCorporations',
+        ]);
+        Route::get('/search/alliances', [
+            'as' => 'timerboard.settings.search.alliances',
+            'uses' => 'SettingsController@searchAlliances',
+        ]);
         Route::post('/tags', [
             'as'   => 'timerboard.settings.tags.store',
             'uses' => 'SettingsController@storeTag',

@@ -74,6 +74,36 @@
                 <button type="submit" class="btn btn-primary mb-2">Save Display Settings</button>
             </form>
             <small class="text-muted">This only affects the dashboard's Local Time column. Eve Time stays in UTC 24-hour format.</small>
+
+            <hr>
+
+            <h5 class="mb-3">Auto Import</h5>
+            <form action="{{ route('timerboard.settings.auto-import') }}" method="POST">
+                {{ csrf_field() }}
+
+                <div class="form-group">
+                    <label for="tracked_corporation_ids">Tracked Corporations</label>
+                    <select name="tracked_corporation_ids[]" id="tracked_corporation_ids" class="form-control" multiple style="width: 100%;">
+                        @foreach($trackedCorporations as $corporation)
+                            <option value="{{ $corporation['id'] }}" selected>{{ $corporation['text'] }}</option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">New notifications received for members of these corporations can create timers automatically when the notification includes a parseable timer.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="tracked_alliance_ids">Tracked Alliances</label>
+                    <select name="tracked_alliance_ids[]" id="tracked_alliance_ids" class="form-control" multiple style="width: 100%;">
+                        @foreach($trackedAlliances as $alliance)
+                            <option value="{{ $alliance['id'] }}" selected>{{ $alliance['text'] }}</option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Alliance selections automatically expand to their current member corporations, so future corp joins and leaves are picked up automatically.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-sm">Save Auto-Import Settings</button>
+            </form>
+            <small class="text-muted d-block mt-2">This only applies to new SeAT notifications going forward. Imported timers will reuse your default access role and add tags like Auto Imported, Friendly, and event-specific tags when appropriate.</small>
         </div>
     </div>
 
@@ -194,3 +224,43 @@
     </div>
     @endcan
 @endsection
+
+@push('javascript')
+    <script>
+        $(function () {
+            function initializeTrackedEntitySelect(selector, url, placeholder) {
+                $(selector).select2({
+                    ajax: {
+                        url: url,
+                        dataType: 'json',
+                        delay: 250,
+                        data: function (params) {
+                            return {
+                                q: params.term || ''
+                            };
+                        },
+                        processResults: function (data) {
+                            return data;
+                        }
+                    },
+                    minimumInputLength: 2,
+                    placeholder: placeholder,
+                    width: '100%',
+                    allowClear: false
+                });
+            }
+
+            initializeTrackedEntitySelect(
+                '#tracked_corporation_ids',
+                @json(route('timerboard.settings.search.corporations')),
+                'Search corporations...'
+            );
+
+            initializeTrackedEntitySelect(
+                '#tracked_alliance_ids',
+                @json(route('timerboard.settings.search.alliances')),
+                'Search alliances...'
+            );
+        });
+    </script>
+@endpush

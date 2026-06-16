@@ -3,6 +3,7 @@
 namespace Raikia\SeatTimerboard;
 
 use Seat\Services\AbstractSeatPlugin;
+use Seat\Eveapi\Models\Character\CharacterNotification;
 
 class TimerboardServiceProvider extends AbstractSeatPlugin
 {
@@ -20,6 +21,7 @@ class TimerboardServiceProvider extends AbstractSeatPlugin
         $this->registerPermissions(__DIR__ . '/Config/timerboard.permissions.php', 'seat-timerboard');
 
         \Raikia\SeatTimerboard\Models\Timer::observe(\Raikia\SeatTimerboard\Observers\TimerObserver::class);
+        CharacterNotification::observe(\Raikia\SeatTimerboard\Observers\CharacterNotificationObserver::class);
         $this->registerDatabaseSeeders(\Raikia\SeatTimerboard\database\seeds\TimerboardSeeder::class);
     }
 
