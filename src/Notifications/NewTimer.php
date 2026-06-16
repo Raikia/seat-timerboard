@@ -57,7 +57,7 @@ class NewTimer extends Notification implements ShouldQueue
                 }
 
                 $embed->field('Tags', $tags->isNotEmpty() ? $tags->implode(', ') : 'None', true);
-                $embed->field('EVE Time', $this->timer->eve_time->copy()->setTimezone('UTC')->format('Y-m-d H:i:s') . ' UTC', true);
+                $embed->field('EVE Time', $this->timer->eve_time->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'), true);
                 $embed->field('Local Time', "<t:{$epoch}:f>", true);
                 $embed->field('Countdown', "<t:{$epoch}:R>", true);
                 $embed->field('Created By', optional($this->timer->user)->name ?? 'Unknown', true);
