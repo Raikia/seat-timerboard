@@ -210,7 +210,7 @@ class NotificationTimerImporter
         }
 
         return $this->buildBasePayload($notification, $trackingContext, [
-            'system' => $this->resolveSystemName($systemId),
+            'system' => $this->resolveLocationName($this->notificationValue($text, ['planetID']), $systemId),
             'structure_type' => 'Skyhook',
             'structure_name' => null,
             'owner_corporation' => $trackingContext['recipient_corporation_name'],
@@ -244,7 +244,7 @@ class NotificationTimerImporter
         }
 
         return $this->buildBasePayload($notification, $trackingContext, [
-            'system' => $this->resolveSystemName($systemId),
+            'system' => $this->resolveLocationName($planetId, $systemId),
             'structure_type' => $this->structureTypeFromTypeId($typeId) ?: 'POCO',
             'structure_name' => null,
             'owner_corporation' => $trackingContext['recipient_corporation_name'],
@@ -474,6 +474,19 @@ class NotificationTimerImporter
         $system = MapDenormalize::find($systemId);
 
         return $system ? $system->itemName : 'System #' . $systemId;
+    }
+
+    private function resolveLocationName($locationId, $fallbackSystemId = null): string
+    {
+        if ($locationId) {
+            $location = MapDenormalize::find($locationId);
+
+            if ($location && filled($location->itemName)) {
+                return $location->itemName;
+            }
+        }
+
+        return $this->resolveSystemName($fallbackSystemId);
     }
 
     private function resolveCorporationName($corporationId): ?string
