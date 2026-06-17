@@ -21,6 +21,9 @@ class Timer extends Model
         'role_id',
         'import_fingerprint',
         'source_notification_type',
+        'sync_origin_instance_uuid',
+        'sync_origin_timer_id',
+        'sync_source_name',
     ];
 
     public function role()
@@ -43,9 +46,20 @@ class Timer extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
     public function mapDenormalize()
     {
         return $this->hasOne(\Seat\Eveapi\Models\Sde\MapDenormalize::class, 'itemName', 'system');
+    }
+
+    public function syncDeliveries()
+    {
+        return $this->hasMany(TimerSyncDelivery::class, 'local_timer_id');
+    }
+
+    public function isRemoteSynced(): bool
+    {
+        return filled($this->sync_origin_instance_uuid) && filled($this->sync_origin_timer_id);
     }
 
     public function getStructureImage()

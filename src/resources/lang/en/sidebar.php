@@ -5,4 +5,5 @@ return [
     'dashboard' => 'Dashboard',
     'create' => 'Create Timer',
     'settings' => 'Settings',
+    'sync' => 'Sync',
 ];

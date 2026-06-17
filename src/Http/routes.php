@@ -102,4 +102,42 @@ Route::group([
             'uses' => 'SettingsController@destroyTag',
         ]);
     });
+
+    Route::group(['middleware' => 'can:seat-timerboard.settings', 'prefix' => 'sync'], function () {
+        Route::get('/', [
+            'as' => 'timerboard.sync.index',
+            'uses' => 'SyncController@index',
+        ]);
+        Route::post('/peers', [
+            'as' => 'timerboard.sync.store',
+            'uses' => 'SyncController@store',
+        ]);
+        Route::post('/peers/{peer}', [
+            'as' => 'timerboard.sync.update',
+            'uses' => 'SyncController@update',
+        ]);
+        Route::delete('/peers/{peer}', [
+            'as' => 'timerboard.sync.destroy',
+            'uses' => 'SyncController@destroy',
+        ]);
+    });
+});
+
+Route::group([
+    'namespace' => 'Raikia\SeatTimerboard\Http\Controllers\Api',
+    'prefix' => 'api/v2/timerboard-sync',
+    'middleware' => ['api.request', 'api.auth'],
+], function () {
+    Route::get('/info', [
+        'as' => 'timerboard.api.sync.info',
+        'uses' => 'SyncApiController@info',
+    ]);
+    Route::post('/timers', [
+        'as' => 'timerboard.api.sync.upsert',
+        'uses' => 'SyncApiController@upsert',
+    ]);
+    Route::delete('/timers', [
+        'as' => 'timerboard.api.sync.delete',
+        'uses' => 'SyncApiController@delete',
+    ]);
 });

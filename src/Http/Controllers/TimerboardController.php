@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\Tag;
+use Raikia\SeatTimerboard\Services\TimerMutationDispatcher;
 use Carbon\Carbon;
 use Seat\Eveapi\Models\RefreshToken;
 use Seat\Eveapi\Services\EseyeClient;
@@ -313,27 +314,41 @@ class TimerboardController extends Controller
     public function destroy($id)
     {
         $timer = Timer::findOrFail($id);
+        $snapshot = app(TimerMutationDispatcher::class)->deletionSnapshot($timer);
         $timer->delete();
+        app(TimerMutationDispatcher::class)->dispatchDeleted($snapshot);
 
         return redirect()->route('timerboard.index')->with('success', 'Timer deleted successfully.');
     }
 
     public function destroyElapsed()
     {
-        Timer::where('eve_time', '<', Carbon::now()->subHours(2))->delete();
+        Timer::where('eve_time', '<', Carbon::now()->subHours(2))
+            ->get()
+            ->each(function (Timer $timer) {
+                $snapshot = app(TimerMutationDispatcher::class)->deletionSnapshot($timer);
+                $timer->delete();
+                app(TimerMutationDispatcher::class)->dispatchDeleted($snapshot);
+            });
 
         return redirect()->route('timerboard.settings')->with('success', 'All elapsed timers deleted successfully.');
     }
 
     public function truncate()
     {
-        Timer::query()->delete();
+        Timer::query()->get()->each(function (Timer $timer) {
+            $snapshot = app(TimerMutationDispatcher::class)->deletionSnapshot($timer);
+            $timer->delete();
+            app(TimerMutationDispatcher::class)->dispatchDeleted($snapshot);
+        });
 
         return redirect()->route('timerboard.settings')->with('success', 'All timers have been deleted.');
     }
 
     private function persistTimer(Timer $timer, array $data, Carbon $eveTime): void
     {
+        $isNew = ! $timer->exists;
+
         $timer->fill([
             'system' => $data['system'],
             'structure_type' => $data['structure_type'],
@@ -344,7 +359,7 @@ class TimerboardController extends Controller
             'role_id' => $data['role_id'] ?? null,
         ]);
 
-        if (!$timer->exists) {
+        if ($isNew) {
             $timer->user_id = auth()->id();
         }
 
@@ -352,6 +367,7 @@ class TimerboardController extends Controller
         $timer->save();
 
         $timer->tags()->sync($data['tags'] ?? []);
+        app(TimerMutationDispatcher::class)->dispatchSaved($timer, $isNew);
     }
 
     private function timerRules(string $prefix = ''): array

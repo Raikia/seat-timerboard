@@ -23,6 +23,13 @@ return [
                 'route' => 'timerboard.settings',
                 'permission' => 'seat-timerboard.settings',
             ],
+            [
+                'name' => 'Sync',
+                'label' => 'seat-timerboard::sidebar.sync',
+                'icon' => 'fas fa-exchange-alt',
+                'route' => 'timerboard.sync.index',
+                'permission' => 'seat-timerboard.settings',
+            ],
         ],
     ],
 ];

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Raikia\SeatTimerboard\Models\Tag;
 use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\TimerboardSetting;
+use Raikia\SeatTimerboard\Services\TimerMutationDispatcher;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Character\CharacterNotification;
 use Seat\Eveapi\Models\Corporation\CorporationInfo;
@@ -66,6 +67,7 @@ class NotificationTimerImporter
             $timer->eve_time = $payload['eve_time'];
             $timer->save();
             $timer->tags()->sync($payload['tag_ids']);
+            app(TimerMutationDispatcher::class)->dispatchSaved($timer, true);
 
             return $timer;
         });
