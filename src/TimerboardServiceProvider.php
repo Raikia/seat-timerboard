@@ -20,7 +20,6 @@ class TimerboardServiceProvider extends AbstractSeatPlugin
         $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
         $this->registerPermissions(__DIR__ . '/Config/timerboard.permissions.php', 'seat-timerboard');
 
-        \Raikia\SeatTimerboard\Models\Timer::observe(\Raikia\SeatTimerboard\Observers\TimerObserver::class);
         CharacterNotification::observe(\Raikia\SeatTimerboard\Observers\CharacterNotificationObserver::class);
         $this->registerDatabaseSeeders(\Raikia\SeatTimerboard\database\seeds\TimerboardSeeder::class);
     }

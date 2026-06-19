@@ -8,6 +8,7 @@ use Raikia\SeatTimerboard\Models\Tag;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Corporation\CorporationInfo;
 use Seat\Eveapi\Models\Universe\UniverseName;
+use Seat\Web\Models\Acl\Role;
 
 class SettingsController extends Controller
 {
@@ -45,7 +46,7 @@ class SettingsController extends Controller
     public function storeDefaultRole(Request $request)
     {
         $request->validate([
-            'default_timer_role' => 'nullable|integer', // exists:roles,id might fail if roles table name is different, but assuming standard. Safest is just integer or strict validation if we are sure.
+            'default_timer_role' => 'nullable|integer|exists:roles,id',
         ]);
 
         \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
@@ -97,6 +98,18 @@ class SettingsController extends Controller
         $request->validate([
             'notification_enabled' => 'nullable|in:on,1,true',
             'notification_role_ids' => 'nullable|array',
+            'notification_role_ids.*' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if ($value === 'public') {
+                        return;
+                    }
+
+                    if (!ctype_digit((string) $value) || !Role::whereKey((int) $value)->exists()) {
+                        $fail('The selected notification role is invalid.');
+                    }
+                },
+            ],
         ]);
 
         \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
@@ -116,7 +129,7 @@ class SettingsController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'color' => 'required|string|max:7',
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
         Tag::create($request->only('name', 'color'));
@@ -128,7 +141,7 @@ class SettingsController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'color' => 'required|string|max:7',
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
         $tag->update($request->only('name', 'color'));
@@ -155,10 +168,13 @@ class SettingsController extends Controller
 
         $results = CorporationInfo::player()
             ->where('name', 'like', '%' . $escapedQuery . '%')
-            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
             ->orderBy('name')
-            ->limit(20)
+            ->limit(100)
             ->get(['corporation_id', 'name'])
+            ->sort(function ($left, $right) use ($query) {
+                return $this->compareSearchLabels($left->name, $right->name, $query);
+            })
+            ->take(20)
             ->map(function ($corporation) {
                 return [
                     'id' => $corporation->corporation_id,
@@ -182,10 +198,13 @@ class SettingsController extends Controller
 
         $results = Alliance::query()
             ->where('name', 'like', '%' . $escapedQuery . '%')
-            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
             ->orderBy('name')
-            ->limit(20)
+            ->limit(100)
             ->get(['alliance_id', 'name'])
+            ->sort(function ($left, $right) use ($query) {
+                return $this->compareSearchLabels($left->name, $right->name, $query);
+            })
+            ->take(20)
             ->map(function ($alliance) {
                 return [
                     'id' => $alliance->alliance_id,
@@ -265,5 +284,17 @@ class SettingsController extends Controller
     private function escapeLike(string $value): string
     {
         return addcslashes($value, '\\%_');
+    }
+
+    private function compareSearchLabels(string $left, string $right, string $query): int
+    {
+        $leftStartsWith = str_starts_with(strtolower($left), strtolower($query));
+        $rightStartsWith = str_starts_with(strtolower($right), strtolower($query));
+
+        if ($leftStartsWith !== $rightStartsWith) {
+            return $leftStartsWith ? -1 : 1;
+        }
+
+        return strcasecmp($left, $right);
     }
 }

@@ -66,6 +66,7 @@ class NotificationTimerImporter
             $timer->eve_time = $payload['eve_time'];
             $timer->save();
             $timer->tags()->sync($payload['tag_ids']);
+            app(TimerNotificationService::class)->queueNewTimerNotification($timer);
 
             return $timer;
         });
@@ -343,16 +344,10 @@ class NotificationTimerImporter
             ->filter()
             ->unique()
             ->map(function ($tagName) {
-                $existing = Tag::whereRaw('LOWER(name) = ?', [strtolower($tagName)])->first();
-
-                if ($existing) {
-                    return $existing->id;
-                }
-
-                return Tag::create([
-                    'name' => $tagName,
-                    'color' => self::TAGS[$tagName] ?? '#6c757d',
-                ])->id;
+                return Tag::firstOrCreate(
+                    ['name' => $tagName],
+                    ['color' => self::TAGS[$tagName] ?? '#6c757d']
+                )->id;
             })
             ->values()
             ->all();

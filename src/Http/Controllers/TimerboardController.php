@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\Tag;
+use Raikia\SeatTimerboard\Services\TimerNotificationService;
 use Carbon\Carbon;
 use Seat\Eveapi\Models\RefreshToken;
 use Seat\Eveapi\Services\EseyeClient;
@@ -194,10 +195,14 @@ class TimerboardController extends Controller
         $results = \Seat\Eveapi\Models\Sde\MapDenormalize::where('itemName', 'like', '%' . $escapedQuery . '%')
             ->whereIn('groupID', [5, 7, 8])
             ->select('itemID', 'itemName', 'typeID', 'solarSystemID', 'groupID')
-            ->orderByRaw('CASE WHEN itemName LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
             ->orderBy('itemName')
-            ->limit(20)
-            ->get();
+            ->limit(100)
+            ->get()
+            ->sort(function ($left, $right) use ($query) {
+                return $this->compareSearchLabels($left->itemName, $right->itemName, $query);
+            })
+            ->take(20)
+            ->values();
 
         $formatted = $results->map(function ($item) {
             return [
@@ -334,6 +339,8 @@ class TimerboardController extends Controller
 
     private function persistTimer(Timer $timer, array $data, Carbon $eveTime): void
     {
+        $isNewTimer = !$timer->exists;
+
         $timer->fill([
             'system' => $data['system'],
             'structure_type' => $data['structure_type'],
@@ -352,6 +359,10 @@ class TimerboardController extends Controller
         $timer->save();
 
         $timer->tags()->sync($data['tags'] ?? []);
+
+        if ($isNewTimer) {
+            app(TimerNotificationService::class)->queueNewTimerNotification($timer);
+        }
     }
 
     private function timerRules(string $prefix = ''): array
