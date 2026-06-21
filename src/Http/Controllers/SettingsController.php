@@ -4,10 +4,12 @@ namespace Raikia\SeatTimerboard\Http\Controllers;
 
 use Seat\Web\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Raikia\SeatTimerboard\Models\NotificationGroupTagFilter;
 use Raikia\SeatTimerboard\Models\Tag;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Corporation\CorporationInfo;
 use Seat\Eveapi\Models\Universe\UniverseName;
+use Seat\Notifications\Models\NotificationGroup;
 use Seat\Web\Models\Acl\Role;
 
 class SettingsController extends Controller
@@ -25,6 +27,16 @@ class SettingsController extends Controller
 
         $notifRoles = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_role_ids');
         $notificationRoleIds = $notifRoles ? json_decode($notifRoles->value, true) : [];
+        $notificationGroups = NotificationGroup::with(['alerts', 'integrations'])
+            ->whereHas('alerts', function ($query) {
+                $query->where('alert', 'seat_timerboard_new_timer');
+            })
+            ->orderBy('name')
+            ->get();
+        $notificationGroupTagFilters = NotificationGroupTagFilter::query()
+            ->whereIn('notification_group_id', $notificationGroups->pluck('id'))
+            ->get()
+            ->keyBy('notification_group_id');
 
         $trackedCorporationIds = $this->jsonSetting('tracked_corporation_ids');
         $trackedAllianceIds = $this->jsonSetting('tracked_alliance_ids');
@@ -38,6 +50,8 @@ class SettingsController extends Controller
             'localTimeFormat',
             'notificationEnabled',
             'notificationRoleIds',
+            'notificationGroups',
+            'notificationGroupTagFilters',
             'trackedCorporations',
             'trackedAlliances'
         ));
@@ -110,6 +124,12 @@ class SettingsController extends Controller
                     }
                 },
             ],
+            'notification_group_filters' => 'nullable|array',
+            'notification_group_filters.*.notification_group_id' => 'required|integer|exists:notification_groups,id',
+            'notification_group_filters.*.allowed_tag_ids' => 'nullable|array',
+            'notification_group_filters.*.allowed_tag_ids.*' => 'integer|exists:seat_timerboard_tags,id',
+            'notification_group_filters.*.blocked_tag_ids' => 'nullable|array',
+            'notification_group_filters.*.blocked_tag_ids.*' => 'integer|exists:seat_timerboard_tags,id',
         ]);
 
         \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
@@ -121,6 +141,33 @@ class SettingsController extends Controller
             ['setting' => 'notification_role_ids'],
             ['value' => json_encode($request->input('notification_role_ids', []))]
         );
+
+        $groupFilters = collect($request->input('notification_group_filters', []))
+            ->filter(fn ($filter) => !empty($filter['notification_group_id']))
+            ->keyBy(fn ($filter) => (int) $filter['notification_group_id']);
+        $groupIds = $groupFilters->pluck('notification_group_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (!empty($groupIds)) {
+            NotificationGroupTagFilter::whereIn('notification_group_id', $groupIds)->delete();
+        }
+
+        $groupFilters->each(function (array $filter) {
+            $allowedTagIds = $this->normalizeTagIds($filter['allowed_tag_ids'] ?? []);
+            $blockedTagIds = $this->normalizeTagIds($filter['blocked_tag_ids'] ?? []);
+
+            if (empty($allowedTagIds) && empty($blockedTagIds)) {
+                return;
+            }
+
+            NotificationGroupTagFilter::create([
+                'notification_group_id' => (int) $filter['notification_group_id'],
+                'allowed_tag_ids' => $allowedTagIds,
+                'blocked_tag_ids' => $blockedTagIds,
+            ]);
+        });
 
         return redirect()->route('timerboard.settings')->with('success', 'Notification settings updated successfully.');
     }
@@ -284,6 +331,16 @@ class SettingsController extends Controller
     private function escapeLike(string $value): string
     {
         return addcslashes($value, '\\%_');
+    }
+
+    private function normalizeTagIds(array $tagIds): array
+    {
+        return collect($tagIds)
+            ->filter(fn ($id) => filled($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function compareSearchLabels(string $left, string $right, string $query): int

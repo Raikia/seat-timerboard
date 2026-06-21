@@ -3,6 +3,7 @@
 namespace Raikia\SeatTimerboard\Services;
 
 use Illuminate\Support\Facades\DB;
+use Raikia\SeatTimerboard\Models\NotificationGroupTagFilter;
 use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\TimerboardSetting;
 use Seat\Notifications\Models\NotificationGroup;
@@ -64,10 +65,57 @@ class TimerNotificationService
             return;
         }
 
+        $groups = $this->filterGroupsByTimerTags($groups, $timer);
+
+        if ($groups->isEmpty()) {
+            logger()->debug(sprintf('[Timerboard][%d] No notification groups matched the timer tag filters.', $timer->id));
+
+            return;
+        }
+
         logger()->debug(sprintf('[Timerboard][%d] Queuing new timer notification.', $timer->id));
 
         $this->dispatchNotifications('seat_timerboard_new_timer', $groups, function ($notificationClass) use ($timer) {
             return new $notificationClass($timer);
         });
+    }
+
+    private function filterGroupsByTimerTags($groups, Timer $timer)
+    {
+        $timerTagIds = $timer->tags->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $filters = NotificationGroupTagFilter::query()
+            ->whereIn('notification_group_id', $groups->pluck('id'))
+            ->get()
+            ->keyBy('notification_group_id');
+
+        return $groups->filter(function (NotificationGroup $group) use ($filters, $timerTagIds) {
+            $filter = $filters->get($group->id);
+
+            if (!$filter) {
+                return true;
+            }
+
+            $allowedTagIds = collect($filter->allowed_tag_ids ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            $blockedTagIds = collect($filter->blocked_tag_ids ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $hasBlockedTag = !empty(array_intersect($timerTagIds, $blockedTagIds));
+
+            if ($hasBlockedTag) {
+                return false;
+            }
+
+            if (empty($allowedTagIds)) {
+                return true;
+            }
+
+            return !empty(array_intersect($timerTagIds, $allowedTagIds));
+        })->values();
     }
 }

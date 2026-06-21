@@ -36,6 +36,96 @@
                     <small class="text-muted">Only send notifications if the timer is restricted to one of these roles. Select "Public" to include public timers.</small>
                 </div>
 
+                <div class="form-group">
+                    <label class="d-block">Per-Group Tag Filters</label>
+                    <small class="text-muted d-block mb-3">Use this when different Discord or Slack groups should receive different timer tags. If Allowed Tags is empty, that group receives all timer tags unless Blocked Tags matches. Blocked Tags always wins.</small>
+
+                    @if($notificationGroups->isEmpty())
+                        <div class="alert alert-secondary mb-0">
+                            No SeAT notification groups are currently subscribed to the Timerboard "New Timer" alert.
+                        </div>
+                    @else
+                        <div id="notification-group-filter-accordion">
+                            @foreach($notificationGroups as $group)
+                                @php($groupFilter = $notificationGroupTagFilters->get($group->id))
+                                @php($integrationSummary = $group->integrations->pluck('name')->filter()->implode(', '))
+                                @php($allowedCount = count($groupFilter->allowed_tag_ids ?? []))
+                                @php($blockedCount = count($groupFilter->blocked_tag_ids ?? []))
+                                <div class="card mb-3">
+                                    <div class="card-header p-0" id="notification-group-filter-heading-{{ $group->id }}">
+                                        <button
+                                            class="btn btn-link btn-block text-left text-decoration-none px-3 py-3"
+                                            type="button"
+                                            data-toggle="collapse"
+                                            data-target="#notification-group-filter-collapse-{{ $group->id }}"
+                                            aria-expanded="false"
+                                            aria-controls="notification-group-filter-collapse-{{ $group->id }}">
+                                            <input type="hidden" name="notification_group_filters[{{ $loop->index }}][notification_group_id]" value="{{ $group->id }}">
+
+                                            <div class="d-flex justify-content-between align-items-start flex-wrap">
+                                                <div class="pr-3">
+                                                    <strong>{{ $group->name }}</strong>
+                                                    <div class="text-muted small">
+                                                        Integrations: {{ $integrationSummary ?: 'None configured' }}
+                                                    </div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <span class="badge badge-secondary">{{ $group->alerts->count() }} alert{{ $group->alerts->count() === 1 ? '' : 's' }}</span>
+                                                    <div class="text-muted small mt-1">
+                                                        {{ $allowedCount }} allowed, {{ $blockedCount }} blocked
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        id="notification-group-filter-collapse-{{ $group->id }}"
+                                        class="collapse"
+                                        aria-labelledby="notification-group-filter-heading-{{ $group->id }}"
+                                        data-parent="#notification-group-filter-accordion">
+                                        <div class="card-body">
+                                            <div class="form-group mb-3">
+                                                <label for="notification_group_filters_{{ $group->id }}_allowed">Allowed Tags</label>
+                                                <select
+                                                    name="notification_group_filters[{{ $loop->index }}][allowed_tag_ids][]"
+                                                    id="notification_group_filters_{{ $group->id }}_allowed"
+                                                    class="form-control"
+                                                    multiple
+                                                    size="{{ min(max($tags->count(), 4), 10) }}">
+                                                    @foreach($tags as $tag)
+                                                        <option value="{{ $tag->id }}" {{ in_array($tag->id, $groupFilter->allowed_tag_ids ?? [], true) ? 'selected' : '' }}>
+                                                            {{ $tag->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <small class="text-muted">Leave empty to allow all timer tags for this group.</small>
+                                            </div>
+
+                                            <div class="form-group mb-0">
+                                                <label for="notification_group_filters_{{ $group->id }}_blocked">Blocked Tags</label>
+                                                <select
+                                                    name="notification_group_filters[{{ $loop->index }}][blocked_tag_ids][]"
+                                                    id="notification_group_filters_{{ $group->id }}_blocked"
+                                                    class="form-control"
+                                                    multiple
+                                                    size="{{ min(max($tags->count(), 4), 10) }}">
+                                                    @foreach($tags as $tag)
+                                                        <option value="{{ $tag->id }}" {{ in_array($tag->id, $groupFilter->blocked_tag_ids ?? [], true) ? 'selected' : '' }}>
+                                                            {{ $tag->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <small class="text-muted">Any blocked match prevents a notification for this group, even if the same timer also matches Allowed Tags.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
                 <button type="submit" class="btn btn-primary btn-sm">Save Notification Settings</button>
             </form>
 
