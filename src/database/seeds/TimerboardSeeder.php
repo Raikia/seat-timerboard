@@ -21,8 +21,10 @@ class TimerboardSeeder extends Seeder
             ['name' => 'Anchoring', 'color' => '#3498db'],   // Blue
             ['name' => 'Unanchoring', 'color' => '#95a5a6'], // Gray
             ['name' => 'Mining', 'color' => '#27ae60'],      // Green
+            ['name' => 'Reinforced', 'color' => '#dc3545'],  // Red
+            ['name' => 'Auto Imported', 'color' => '#6c757d'], // Gray
             ['name' => 'Hostile', 'color' => '#dc3545'],     // Bootstrap Danger
-            ['name' => 'Friendly', 'color' => '#007bff'],    // Bootstrap Primary
+            ['name' => 'Friendly', 'color' => '#28a745'],    // Green
         ];
 
         foreach ($tags as $tag) {

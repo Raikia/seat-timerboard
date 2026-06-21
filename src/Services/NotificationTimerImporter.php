@@ -22,8 +22,6 @@ class NotificationTimerImporter
         'Friendly' => '#28a745',
         'Anchoring' => '#17a2b8',
         'Reinforced' => '#dc3545',
-        'Sovereignty' => '#6f42c1',
-        'Skyhook' => '#fd7e14',
     ];
 
     /**
@@ -217,7 +215,7 @@ class NotificationTimerImporter
             'owner_corporation' => $trackingContext['recipient_corporation_name'],
             'attacker_corporation' => null,
             'eve_time' => $eveTime,
-            'tag_names' => ['Auto Imported', 'Friendly', 'Reinforced', 'Skyhook'],
+            'tag_names' => ['Auto Imported', 'Friendly', 'Reinforced'],
             'note_lines' => [
                 $itemId ? 'Structure ID: ' . $itemId : null,
                 $this->notificationValue($text, ['planetID']) ? 'Planet ID: ' . $this->notificationValue($text, ['planetID']) : null,
@@ -286,7 +284,7 @@ class NotificationTimerImporter
             'owner_corporation' => $ownerAllianceName ?: ($trackingContext['recipient_alliance_name'] ?: $trackingContext['recipient_corporation_name']),
             'attacker_corporation' => null,
             'eve_time' => $eveTime,
-            'tag_names' => ['Auto Imported', 'Friendly', 'Reinforced', 'Sovereignty'],
+            'tag_names' => ['Auto Imported', 'Friendly', 'Reinforced'],
             'note_lines' => [
                 $campaignEventType ? 'Campaign event type: ' . $campaignEventType : null,
                 $trackingContext['recipient_alliance_name'] ? 'Tracked alliance: ' . $trackingContext['recipient_alliance_name'] : null,
