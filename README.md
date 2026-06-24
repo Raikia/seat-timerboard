@@ -11,7 +11,8 @@ It adds a `Timerboard` section to SeAT with:
 - tags and optional role-based visibility
 - Discord notifications for new timers
 - automatic timer imports from supported SeAT notifications
-- settings for defaults, notifications, display, auto-import, and cleanup
+- peer-to-peer sync between SeAT instances
+- settings for defaults, notifications, display, auto-import, sync, tags, and cleanup
 
 The board keeps timers in `Current` until 2 hours after they elapse, then moves them to `Elapsed`.
 
@@ -24,9 +25,12 @@ The board keeps timers in `Current` until 2 hours after they elapse, then moves 
 - Filter timers by structure type, tag, region, visibility, note presence, owner, attacker, or free-text search
 - Restrict timers to specific SeAT roles or leave them public
 - Send Discord notifications when new timers are created
+- Configure per-notification-group role and tag filters so different Discord/Slack groups receive different timers
 - Configure local time display in either 24-hour or AM/PM format
 - Automatically import friendly timers from supported SeAT notifications with duplicate protection and source tagging
-- Manage tags, default visibility, notifications, auto-import scope, and cleanup tools from the settings page
+- Sync timers directly with other SeAT instances using tag-controlled peer connections
+- Preserve optional structure notes for fittings, handoff context, or manual reminders
+- Manage tags, default visibility, notifications, auto-import scope, sync peers, and cleanup tools from the settings page
 
 ### Supported auto-import notifications
 
@@ -36,10 +40,11 @@ When auto-import is enabled and the notification belongs to a tracked corporatio
 - `StructureLostArmor`
 - `StructureLostShields`
 - `SkyhookLostShields`
+- `MercenaryDenReinforced`
 - `OrbitalReinforced`
 - `SovStructureReinforced`
 
-Imported timers are tagged automatically where appropriate, such as `Auto Imported`, `Friendly`, `Anchoring`, `Reinforced`, `Skyhook`, and `Sovereignty`.
+Imported timers are tagged automatically where appropriate, such as `Auto Imported`, `Friendly`, `Anchoring`, and `Reinforced`.
 
 ## Requirements
 
@@ -67,7 +72,7 @@ php artisan db:seed --class=Raikia\\SeatTimerboard\\Database\\Seeds\\TimerboardS
 
 Notes:
 
-- The seeder creates a few default tags
+- The seeder creates the default system and common-use tags
 - If you run SeAT in Docker, run these commands inside the SeAT app container
 - In Docker-based SeAT environments, restart `front`, `worker`, and `scheduler` after plugin updates so SeAT reloads the package cleanly
 
@@ -79,8 +84,9 @@ After installation:
 2. Open `Timerboard -> Settings`.
 3. Set an optional default access role for new timers.
 4. Review the default tags.
-5. Configure notifications if you want Discord alerts.
+5. Configure notifications if you want Discord or Slack alerts.
 6. Configure display and auto-import settings if you want local time formatting or automatic friendly timer ingestion.
+7. Configure sync peers if you want to exchange timers with other SeAT instances.
 
 ## Permissions
 
@@ -97,11 +103,17 @@ The plugin registers the following permissions:
 
 ## Settings
 
-The settings page currently supports five areas.
+The settings page currently supports six areas.
 
 ### Notifications
 
-You can enable or disable notifications and limit them to specific timer access roles. Include `Public (Everyone)` if you want public timers to notify.
+You can enable or disable notifications, then configure each subscribed SeAT notification group independently.
+
+Each notification group can define:
+
+- which timer access roles it receives
+- which timer tags it explicitly allows
+- which timer tags it blocks
 
 To send Discord notifications:
 
@@ -109,6 +121,8 @@ To send Discord notifications:
 2. Add a Discord integration to that group.
 3. Subscribe the group to the `seat_timerboard_new_timer` alert.
 4. Enable notifications in `Timerboard -> Settings`.
+
+Slack groups can be configured the same way through SeAT notification integrations.
 
 ### Defaults
 
@@ -126,10 +140,23 @@ Choose which corporations and alliances should be watched for friendly structure
 - Tracked alliances are stored as alliances, but imports resolve against their current member corporations
 - Only new notifications going forward are imported
 - Duplicate imports are ignored using a notification-derived fingerprint
+- Imported timers reuse the default access role and receive protected system tags such as `Auto Imported`, `Friendly`, `Anchoring`, `Reinforced`, and `Remote Synced` where applicable
+
+### Sync
+
+Timerboard Sync allows direct SeAT-to-SeAT timer sharing without forwarding through a mesh.
+
+- Sync is peer-to-peer only: timers are sent only to the remote SeAT instances you explicitly configure
+- Outbound sync is tag-controlled per peer
+- Incoming timers are marked locally with `Remote Synced`
+- Remote timers keep their source notes and tags, plus a local sync note
+- Peer settings let you choose the incoming default role and whether remote deletes should also remove the local copy
 
 ### Tags
 
 Create, edit, and delete color-coded tags from the settings page.
+
+Some system tags are protected because plugin features depend on them. Protected tags can have their colors changed, but their names and deletion are locked.
 
 ## Usage
 
@@ -156,6 +183,18 @@ Use the pencil action on a timer row to update it in the edit modal. Notes can b
 - `Current` and `Elapsed` timers are shown in separate dashboard views
 - The collapsible filter panel lets you narrow the list without leaving the page
 - Table sorting works on timer values rather than the formatted display text
+
+### Syncing Timers
+
+Open `Timerboard -> Sync` to configure remote SeAT peers.
+
+For each peer you can define:
+
+- the remote SeAT instance UUID and base URL
+- the API token used for authentication
+- which local tags should cause timers to be pushed outbound
+- which local access role inbound timers should use
+- whether deletes on this SeAT should also delete the remote copy
 
 ## Repository
 
