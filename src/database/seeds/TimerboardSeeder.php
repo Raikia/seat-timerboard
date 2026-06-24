@@ -14,20 +14,7 @@ class TimerboardSeeder extends Seeder
      */
     public function run()
     {
-        $tags = [
-            ['name' => 'Armor', 'color' => '#f39c12'],       // Orange
-            ['name' => 'Hull', 'color' => '#e74c3c'],        // Red
-            ['name' => 'Final', 'color' => '#8e44ad'],       // Purple
-            ['name' => 'Anchoring', 'color' => '#3498db'],   // Blue
-            ['name' => 'Unanchoring', 'color' => '#95a5a6'], // Gray
-            ['name' => 'Mining', 'color' => '#27ae60'],      // Green
-            ['name' => 'Reinforced', 'color' => '#dc3545'],  // Red
-            ['name' => 'Auto Imported', 'color' => '#6c757d'], // Gray
-            ['name' => 'Hostile', 'color' => '#dc3545'],     // Bootstrap Danger
-            ['name' => 'Friendly', 'color' => '#28a745'],    // Green
-        ];
-
-        foreach ($tags as $tag) {
+        foreach (Tag::DEFAULT_TAGS as $tag) {
             Tag::firstOrCreate(
                 ['name' => $tag['name']],
                 ['color' => $tag['color']]

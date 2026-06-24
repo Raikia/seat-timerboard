@@ -196,23 +196,37 @@ class SettingsController extends Controller
 
     public function updateTag(Request $request, Tag $tag)
     {
-        $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('seat_timerboard_tags', 'name')->ignore($tag->id),
-            ],
+        $validated = $request->validate([
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'name' => $tag->isProtectedSystemTag()
+                ? ['nullable', 'string']
+                : [
+                    'required',
+                    'string',
+                    'max:255',
+                    Rule::unique('seat_timerboard_tags', 'name')->ignore($tag->id),
+                ],
         ]);
 
-        $tag->update($request->only('name', 'color'));
+        $attributes = ['color' => $validated['color']];
 
-        return redirect()->route('timerboard.settings')->with('success', 'Tag updated successfully.');
+        if (! $tag->isProtectedSystemTag()) {
+            $attributes['name'] = $validated['name'];
+        }
+
+        $tag->update($attributes);
+
+        return redirect()->route('timerboard.settings')->with('success', $tag->isProtectedSystemTag()
+            ? 'System tag color updated successfully.'
+            : 'Tag updated successfully.');
     }
 
     public function destroyTag(Tag $tag)
     {
+        if ($tag->isProtectedSystemTag()) {
+            return redirect()->route('timerboard.settings')->with('error', 'This system tag is required for notification imports and cannot be deleted.');
+        }
+
         DB::transaction(function () use ($tag) {
             NotificationGroupTagFilter::query()
                 ->get()

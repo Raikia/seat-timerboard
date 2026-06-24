@@ -22,13 +22,6 @@ class NotificationTimerImporter
 {
     private const UNIVERSE_STRUCTURES_SCOPE = 'esi-universe.read_structures.v1';
 
-    private const TAGS = [
-        'Auto Imported' => '#6c757d',
-        'Friendly' => '#28a745',
-        'Anchoring' => '#17a2b8',
-        'Reinforced' => '#dc3545',
-    ];
-
     /**
      * Import a timer from a newly created SeAT character notification when applicable.
      */
@@ -396,7 +389,7 @@ class NotificationTimerImporter
             ->map(function ($tagName) {
                 return Tag::firstOrCreate(
                     ['name' => $tagName],
-                    ['color' => self::TAGS[$tagName] ?? '#6c757d']
+                    ['color' => Tag::defaultColorFor($tagName)]
                 )->id;
             })
             ->values()

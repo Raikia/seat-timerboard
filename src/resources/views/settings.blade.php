@@ -207,6 +207,7 @@
                     <tr>
                         <th>Name</th>
                         <th>Color</th>
+                        <th>Type</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -218,12 +219,25 @@
                             </td>
                             <td>{{ $tag->color }}</td>
                             <td>
-                                <button type="button" class="btn btn-warning btn-xs" data-toggle="modal" data-target="#editTagModal-{{ $tag->id }}">Edit</button>
-                                <form action="{{ route('timerboard.settings.tags.destroy', $tag->id) }}" method="POST" onsubmit="return confirm('Are you sure?');" style="display:inline-block;">
-                                    {{ csrf_field() }}
-                                    {{ method_field('DELETE') }}
-                                    <button type="submit" class="btn btn-danger btn-xs">Delete</button>
-                                </form>
+                                @if($tag->isProtectedSystemTag())
+                                    <span class="badge badge-secondary">Required for auto-import</span>
+                                @else
+                                    <span class="text-muted">Custom</span>
+                                @endif
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-warning btn-xs" data-toggle="modal" data-target="#editTagModal-{{ $tag->id }}">
+                                    {{ $tag->isProtectedSystemTag() ? 'Edit Color' : 'Edit' }}
+                                </button>
+                                @unless($tag->isProtectedSystemTag())
+                                    <form action="{{ route('timerboard.settings.tags.destroy', $tag->id) }}" method="POST" onsubmit="return confirm('Are you sure?');" style="display:inline-block;">
+                                        {{ csrf_field() }}
+                                        {{ method_field('DELETE') }}
+                                        <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+                                    </form>
+                                @else
+                                    <small class="text-muted d-inline-block ml-2">Name and deletion are locked.</small>
+                                @endunless
 
                                 <!-- Edit Tag Modal -->
                                 <div class="modal fade" id="editTagModal-{{ $tag->id }}" tabindex="-1" role="dialog" aria-labelledby="editTagModalLabel-{{ $tag->id }}" aria-hidden="true">
@@ -240,7 +254,16 @@
                                                 <div class="modal-body">
                                                     <div class="form-group">
                                                         <label for="edit-tag-name-{{ $tag->id }}">Tag Name</label>
-                                                        <input type="text" class="form-control" name="name" id="edit-tag-name-{{ $tag->id }}" value="{{ $tag->name }}" required>
+                                                        <input
+                                                            type="text"
+                                                            class="form-control"
+                                                            name="name"
+                                                            id="edit-tag-name-{{ $tag->id }}"
+                                                            value="{{ $tag->name }}"
+                                                            {{ $tag->isProtectedSystemTag() ? 'readonly' : 'required' }}>
+                                                        @if($tag->isProtectedSystemTag())
+                                                            <small class="text-muted">This tag name is reserved by Timerboard auto-import and cannot be changed.</small>
+                                                        @endif
                                                     </div>
                                                     <div class="form-group">
                                                         <label for="edit-tag-color-{{ $tag->id }}">Color</label>

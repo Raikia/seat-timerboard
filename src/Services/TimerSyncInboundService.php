@@ -84,7 +84,7 @@ class TimerSyncInboundService
 
                 return Tag::create([
                     'name' => $name,
-                    'color' => Arr::get($tag, 'color', '#6c757d'),
+                    'color' => Arr::get($tag, 'color', Tag::defaultColorFor($name)),
                 ])->id;
             })
             ->filter()
@@ -98,7 +98,7 @@ class TimerSyncInboundService
         if (! $remoteSyncedTag) {
             $remoteSyncedTag = Tag::create([
                 'name' => 'Remote Synced',
-                'color' => '#6c757d',
+                'color' => Tag::defaultColorFor('Remote Synced'),
             ]);
         }
 
