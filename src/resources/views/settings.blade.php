@@ -167,7 +167,10 @@
 
             <hr>
 
-            <h5 class="mb-3">Auto Import</h5>
+            <h5 class="mb-2">Automatic Timer Import</h5>
+            <p class="text-muted mb-3">
+                Timerboard can watch new SeAT structure notifications for selected corporations and alliances, then automatically create timers when those notifications include a parseable reinforcement or anchoring date. Use this to keep friendly structure timers flowing into the board without manual entry.
+            </p>
             <form action="{{ route('timerboard.settings.auto-import') }}" method="POST">
                 {{ csrf_field() }}
 
