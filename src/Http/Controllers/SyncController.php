@@ -9,6 +9,7 @@ use Raikia\SeatTimerboard\Models\Tag;
 use Raikia\SeatTimerboard\Models\TimerSyncPeer;
 use Raikia\SeatTimerboard\Services\TimerboardInstanceIdentity;
 use Seat\Web\Http\Controllers\Controller;
+use Seat\Web\Models\Acl\Role;
 
 class SyncController extends Controller
 {
@@ -18,7 +19,7 @@ class SyncController extends Controller
             ->orderBy('name')
             ->get();
         $tags = Tag::orderBy('name')->get();
-        $roles = \Seat\Web\Models\Acl\Role::orderBy('title')->get();
+        $roles = Role::orderBy('title')->get();
 
         return view('seat-timerboard::sync', [
             'peers' => $peers,

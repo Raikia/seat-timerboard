@@ -73,7 +73,10 @@ class TimerSyncInboundService
                     return null;
                 }
 
-                $existing = Tag::whereRaw('LOWER(name) = ?', [strtolower($name)])->first();
+                $existing = Tag::query()
+                    ->where('name', $name)
+                    ->orderBy('id')
+                    ->first();
 
                 if ($existing) {
                     return $existing->id;
@@ -87,7 +90,10 @@ class TimerSyncInboundService
             ->filter()
             ->values();
 
-        $remoteSyncedTag = Tag::whereRaw('LOWER(name) = ?', ['remote synced'])->first();
+        $remoteSyncedTag = Tag::query()
+            ->where('name', 'Remote Synced')
+            ->orderBy('id')
+            ->first();
 
         if (! $remoteSyncedTag) {
             $remoteSyncedTag = Tag::create([

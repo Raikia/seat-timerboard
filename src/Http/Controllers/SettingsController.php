@@ -3,14 +3,16 @@
 namespace Raikia\SeatTimerboard\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
-use Seat\Web\Http\Controllers\Controller;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Raikia\SeatTimerboard\Models\NotificationGroupTagFilter;
 use Raikia\SeatTimerboard\Models\Tag;
+use Raikia\SeatTimerboard\Models\TimerboardSetting;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Corporation\CorporationInfo;
 use Seat\Eveapi\Models\Universe\UniverseName;
 use Seat\Notifications\Models\NotificationGroup;
+use Seat\Web\Http\Controllers\Controller;
 use Seat\Web\Models\Acl\Role;
 
 class SettingsController extends Controller
@@ -18,15 +20,15 @@ class SettingsController extends Controller
     public function index()
     {
         $tags = Tag::orderBy('name')->get();
-        $roles = \Seat\Web\Models\Acl\Role::all();
-        $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
+        $roles = Role::all();
+        $defaultRole = TimerboardSetting::find('default_timer_role');
         $defaultRoleId = $defaultRole ? $defaultRole->value : null;
-        $localTimeFormat = optional(\Raikia\SeatTimerboard\Models\TimerboardSetting::find('local_time_format'))->value ?? '24h';
+        $localTimeFormat = optional(TimerboardSetting::find('local_time_format'))->value ?? '24h';
 
-        $notifEnabled = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_enabled');
+        $notifEnabled = TimerboardSetting::find('notification_enabled');
         $notificationEnabled = $notifEnabled ? filter_var($notifEnabled->value, FILTER_VALIDATE_BOOLEAN) : false;
 
-        $notifRoles = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_role_ids');
+        $notifRoles = TimerboardSetting::find('notification_role_ids');
         $notificationRoleIds = $notifRoles ? json_decode($notifRoles->value, true) : [];
         $notificationGroups = NotificationGroup::with(['alerts', 'integrations'])
             ->whereHas('alerts', function ($query) {
@@ -64,7 +66,7 @@ class SettingsController extends Controller
             'default_timer_role' => 'nullable|integer|exists:roles,id',
         ]);
 
-        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+        TimerboardSetting::updateOrCreate(
             ['setting' => 'default_timer_role'],
             ['value' => $request->input('default_timer_role')]
         );
@@ -78,7 +80,7 @@ class SettingsController extends Controller
             'local_time_format' => 'required|in:24h,ampm',
         ]);
 
-        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+        TimerboardSetting::updateOrCreate(
             ['setting' => 'local_time_format'],
             ['value' => $request->input('local_time_format', '24h')]
         );
@@ -95,12 +97,12 @@ class SettingsController extends Controller
             'tracked_alliance_ids.*' => 'integer',
         ]);
 
-        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+        TimerboardSetting::updateOrCreate(
             ['setting' => 'tracked_corporation_ids'],
             ['value' => json_encode(array_values(array_unique($request->input('tracked_corporation_ids', []))))]
         );
 
-        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+        TimerboardSetting::updateOrCreate(
             ['setting' => 'tracked_alliance_ids'],
             ['value' => json_encode(array_values(array_unique($request->input('tracked_alliance_ids', []))))]
         );
@@ -142,12 +144,12 @@ class SettingsController extends Controller
             ->all();
 
         DB::transaction(function () use ($request, $groupFilters, $groupIds) {
-            \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+            TimerboardSetting::updateOrCreate(
                 ['setting' => 'notification_enabled'],
                 ['value' => $request->has('notification_enabled')]
             );
 
-            \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+            TimerboardSetting::updateOrCreate(
                 ['setting' => 'notification_role_ids'],
                 ['value' => json_encode($request->input('notification_role_ids', []))]
             );
@@ -178,7 +180,12 @@ class SettingsController extends Controller
     public function storeTag(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('seat_timerboard_tags', 'name'),
+            ],
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
@@ -190,7 +197,12 @@ class SettingsController extends Controller
     public function updateTag(Request $request, Tag $tag)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('seat_timerboard_tags', 'name')->ignore($tag->id),
+            ],
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
@@ -296,7 +308,7 @@ class SettingsController extends Controller
 
     private function jsonSetting(string $key): array
     {
-        $setting = \Raikia\SeatTimerboard\Models\TimerboardSetting::find($key);
+        $setting = TimerboardSetting::find($key);
 
         if (!$setting || blank($setting->value)) {
             return [];

@@ -36,7 +36,7 @@ class SyncApiController extends Controller
             'timer.eve_time' => 'required|date',
             'timer.tags' => 'nullable|array',
             'timer.tags.*.name' => 'required|string|max:255',
-            'timer.tags.*.color' => 'nullable|string|max:7',
+            'timer.tags.*.color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
         $peer = $this->resolvePeer($payload['source_instance_uuid']);

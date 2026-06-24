@@ -239,12 +239,12 @@
                                                 {{ csrf_field() }}
                                                 <div class="modal-body">
                                                     <div class="form-group">
-                                                        <label for="name">Tag Name</label>
-                                                        <input type="text" class="form-control" name="name" id="name" value="{{ $tag->name }}" required>
+                                                        <label for="edit-tag-name-{{ $tag->id }}">Tag Name</label>
+                                                        <input type="text" class="form-control" name="name" id="edit-tag-name-{{ $tag->id }}" value="{{ $tag->name }}" required>
                                                     </div>
                                                     <div class="form-group">
-                                                        <label for="color">Color</label>
-                                                        <input type="color" class="form-control" name="color" id="color" value="{{ $tag->color }}" style="width: 50px;" required>
+                                                        <label for="edit-tag-color-{{ $tag->id }}">Color</label>
+                                                        <input type="color" class="form-control" name="color" id="edit-tag-color-{{ $tag->id }}" value="{{ $tag->color }}" style="width: 50px;" required>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
@@ -267,12 +267,12 @@
             <form action="{{ route('timerboard.settings.tags.store') }}" method="POST" class="form-inline">
                 {{ csrf_field() }}
                 <div class="form-group mb-2">
-                    <label for="name" class="sr-only">Name</label>
-                    <input type="text" class="form-control" name="name" id="name" placeholder="Tag Name" required>
+                    <label for="new-tag-name" class="sr-only">Name</label>
+                    <input type="text" class="form-control" name="name" id="new-tag-name" placeholder="Tag Name" required>
                 </div>
                 <div class="form-group mx-sm-3 mb-2">
-                    <label for="color" class="sr-only">Color</label>
-                    <input type="color" class="form-control" name="color" id="color" value="#007bff" style="width: 50px;" required>
+                    <label for="new-tag-color" class="sr-only">Color</label>
+                    <input type="color" class="form-control" name="color" id="new-tag-color" value="#007bff" style="width: 50px;" required>
                 </div>
                 <button type="submit" class="btn btn-primary mb-2">Add Tag</button>
             </form>

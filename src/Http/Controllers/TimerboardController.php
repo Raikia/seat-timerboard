@@ -7,12 +7,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\Tag;
+use Raikia\SeatTimerboard\Models\Timer;
+use Raikia\SeatTimerboard\Models\TimerboardSetting;
 use Raikia\SeatTimerboard\Services\TimerMutationDispatcher;
 use Carbon\Carbon;
 use Seat\Eveapi\Models\RefreshToken;
+use Seat\Eveapi\Models\Sde\MapDenormalize;
 use Seat\Eveapi\Services\EseyeClient;
+use Seat\Web\Models\Acl\Role;
 
 class TimerboardController extends Controller
 {
@@ -44,10 +47,10 @@ class TimerboardController extends Controller
         });
 
         $tags = Tag::orderBy('name')->get();
-        $roles = \Seat\Web\Models\Acl\Role::all();
-        $defaultRole = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('default_timer_role');
+        $roles = Role::all();
+        $defaultRole = TimerboardSetting::find('default_timer_role');
         $defaultRoleId = $defaultRole ? $defaultRole->value : null;
-        $localTimeFormat = optional(\Raikia\SeatTimerboard\Models\TimerboardSetting::find('local_time_format'))->value ?? '24h';
+        $localTimeFormat = optional(TimerboardSetting::find('local_time_format'))->value ?? '24h';
         $structureTypes = $this->getStructureTypes();
         $filterRegions = $allTimers->map(function ($timer) {
             return $timer->getRegionName();
@@ -192,7 +195,7 @@ class TimerboardController extends Controller
         $escapedQuery = $this->escapeLike($query);
 
         // groupIDs: 5 = Solar System, 7 = Planet, 8 = Moon
-        $results = \Seat\Eveapi\Models\Sde\MapDenormalize::where('itemName', 'like', '%' . $escapedQuery . '%')
+        $results = MapDenormalize::where('itemName', 'like', '%' . $escapedQuery . '%')
             ->whereIn('groupID', [5, 7, 8])
             ->select('itemID', 'itemName', 'typeID', 'solarSystemID', 'groupID')
             ->orderBy('itemName')

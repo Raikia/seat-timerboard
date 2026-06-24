@@ -2,6 +2,8 @@
 
 namespace Raikia\SeatTimerboard;
 
+use Raikia\SeatTimerboard\database\seeds\TimerboardSeeder;
+use Raikia\SeatTimerboard\Observers\CharacterNotificationObserver;
 use Seat\Services\AbstractSeatPlugin;
 use Seat\Eveapi\Models\Character\CharacterNotification;
 
@@ -20,8 +22,8 @@ class TimerboardServiceProvider extends AbstractSeatPlugin
         $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
         $this->registerPermissions(__DIR__ . '/Config/timerboard.permissions.php', 'seat-timerboard');
 
-        CharacterNotification::observe(\Raikia\SeatTimerboard\Observers\CharacterNotificationObserver::class);
-        $this->registerDatabaseSeeders(\Raikia\SeatTimerboard\database\seeds\TimerboardSeeder::class);
+        CharacterNotification::observe(CharacterNotificationObserver::class);
+        $this->registerDatabaseSeeders(TimerboardSeeder::class);
     }
 
     /**
