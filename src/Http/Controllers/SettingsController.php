@@ -27,9 +27,6 @@ class SettingsController extends Controller
 
         $notifEnabled = TimerboardSetting::find('notification_enabled');
         $notificationEnabled = $notifEnabled ? filter_var($notifEnabled->value, FILTER_VALIDATE_BOOLEAN) : false;
-
-        $notifRoles = TimerboardSetting::find('notification_role_ids');
-        $notificationRoleIds = $notifRoles ? json_decode($notifRoles->value, true) : [];
         $notificationGroups = NotificationGroup::with(['alerts', 'integrations'])
             ->whereHas('alerts', function ($query) {
                 $query->where('alert', 'seat_timerboard_new_timer');
@@ -52,7 +49,6 @@ class SettingsController extends Controller
             'defaultRoleId',
             'localTimeFormat',
             'notificationEnabled',
-            'notificationRoleIds',
             'notificationGroups',
             'notificationGroupTagFilters',
             'trackedCorporations',
@@ -114,8 +110,10 @@ class SettingsController extends Controller
     {
         $request->validate([
             'notification_enabled' => 'nullable|in:on,1,true',
-            'notification_role_ids' => 'nullable|array',
-            'notification_role_ids.*' => [
+            'notification_group_filters' => 'nullable|array',
+            'notification_group_filters.*.notification_group_id' => 'required|integer|exists:notification_groups,id',
+            'notification_group_filters.*.allowed_role_ids' => 'nullable|array',
+            'notification_group_filters.*.allowed_role_ids.*' => [
                 'required',
                 function ($attribute, $value, $fail) {
                     if ($value === 'public') {
@@ -127,8 +125,6 @@ class SettingsController extends Controller
                     }
                 },
             ],
-            'notification_group_filters' => 'nullable|array',
-            'notification_group_filters.*.notification_group_id' => 'required|integer|exists:notification_groups,id',
             'notification_group_filters.*.allowed_tag_ids' => 'nullable|array',
             'notification_group_filters.*.allowed_tag_ids.*' => 'integer|exists:seat_timerboard_tags,id',
             'notification_group_filters.*.blocked_tag_ids' => 'nullable|array',
@@ -149,25 +145,22 @@ class SettingsController extends Controller
                 ['value' => $request->has('notification_enabled')]
             );
 
-            TimerboardSetting::updateOrCreate(
-                ['setting' => 'notification_role_ids'],
-                ['value' => json_encode($request->input('notification_role_ids', []))]
-            );
-
             if (!empty($groupIds)) {
                 NotificationGroupTagFilter::whereIn('notification_group_id', $groupIds)->delete();
             }
 
             $groupFilters->each(function (array $filter) {
+                $allowedRoleIds = $this->normalizeNotificationRoleIds($filter['allowed_role_ids'] ?? []);
                 $allowedTagIds = $this->normalizeTagIds($filter['allowed_tag_ids'] ?? []);
                 $blockedTagIds = $this->normalizeTagIds($filter['blocked_tag_ids'] ?? []);
 
-                if (empty($allowedTagIds) && empty($blockedTagIds)) {
+                if ($allowedRoleIds === ['public'] && empty($allowedTagIds) && empty($blockedTagIds)) {
                     return;
                 }
 
                 NotificationGroupTagFilter::create([
                     'notification_group_id' => (int) $filter['notification_group_id'],
+                    'allowed_role_ids' => $allowedRoleIds,
                     'allowed_tag_ids' => $allowedTagIds,
                     'blocked_tag_ids' => $blockedTagIds,
                 ]);
@@ -231,6 +224,7 @@ class SettingsController extends Controller
             NotificationGroupTagFilter::query()
                 ->get()
                 ->each(function (NotificationGroupTagFilter $filter) use ($tag) {
+                    $allowedRoleIds = $this->normalizeNotificationRoleIds($filter->allowed_role_ids ?? []);
                     $allowedTagIds = collect($filter->allowed_tag_ids ?? [])
                         ->reject(fn ($id) => (int) $id === (int) $tag->id)
                         ->map(fn ($id) => (int) $id)
@@ -242,13 +236,14 @@ class SettingsController extends Controller
                         ->values()
                         ->all();
 
-                    if (empty($allowedTagIds) && empty($blockedTagIds)) {
+                    if ($allowedRoleIds === ['public'] && empty($allowedTagIds) && empty($blockedTagIds)) {
                         $filter->delete();
 
                         return;
                     }
 
                     $filter->update([
+                        'allowed_role_ids' => $allowedRoleIds,
                         'allowed_tag_ids' => $allowedTagIds,
                         'blocked_tag_ids' => $blockedTagIds,
                     ]);
@@ -398,6 +393,20 @@ class SettingsController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function normalizeNotificationRoleIds(array $roleIds): array
+    {
+        $normalized = collect($roleIds)
+            ->filter(fn ($roleId) => filled($roleId))
+            ->map(function ($roleId) {
+                return $roleId === 'public' ? 'public' : (string) (int) $roleId;
+            })
+            ->unique()
+            ->values()
+            ->all();
+
+        return empty($normalized) ? ['public'] : $normalized;
     }
 
     private function compareSearchLabels(string $left, string $right, string $query): int

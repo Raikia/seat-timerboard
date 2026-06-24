@@ -110,6 +110,7 @@ trait CreatesDatabaseSchema
         Schema::create('seat_timerboard_notification_group_tag_filters', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedInteger('notification_group_id');
+            $table->json('allowed_role_ids')->nullable();
             $table->json('allowed_tag_ids')->nullable();
             $table->json('blocked_tag_ids')->nullable();
             $table->timestamps();

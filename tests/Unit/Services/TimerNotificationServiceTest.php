@@ -24,13 +24,13 @@ class TimerNotificationServiceTest extends TestCase
         $group = $this->createSlackNotificationGroup();
         NotificationGroupTagFilter::create([
             'notification_group_id' => $group->id,
+            'allowed_role_ids' => ['public'],
             'allowed_tag_ids' => [$friendly->id],
             'blocked_tag_ids' => [],
         ]);
 
         $this->seedTimerboardSettings([
             'notification_enabled' => true,
-            'notification_role_ids' => ['public'],
         ]);
 
         app(TimerNotificationService::class)->sendNewTimer($timer);
@@ -49,18 +49,73 @@ class TimerNotificationServiceTest extends TestCase
         $group = $this->createSlackNotificationGroup();
         NotificationGroupTagFilter::create([
             'notification_group_id' => $group->id,
+            'allowed_role_ids' => ['public'],
             'allowed_tag_ids' => [],
             'blocked_tag_ids' => [$hostile->id],
         ]);
 
         $this->seedTimerboardSettings([
             'notification_enabled' => true,
-            'notification_role_ids' => ['public'],
         ]);
 
         app(TimerNotificationService::class)->sendNewTimer($timer);
 
         Notification::assertNothingSent();
+    }
+
+    public function test_it_defaults_groups_to_public_timers_only(): void
+    {
+        Notification::fake();
+
+        $publicTimer = $this->createTimerWithTags(['Friendly'], [
+            'structure_name' => 'Public Fort',
+            'role_id' => null,
+        ]);
+
+        $restrictedTimer = $this->createTimerWithTags(['Friendly'], [
+            'structure_name' => 'Restricted Fort',
+            'role_id' => 7,
+        ]);
+
+        $this->createSlackNotificationGroup();
+
+        $this->seedTimerboardSettings([
+            'notification_enabled' => true,
+        ]);
+
+        app(TimerNotificationService::class)->sendNewTimer($publicTimer);
+        Notification::assertSentOnDemand(NewTimer::class);
+
+        Notification::fake();
+
+        app(TimerNotificationService::class)->sendNewTimer($restrictedTimer);
+        Notification::assertNothingSent();
+    }
+
+    public function test_it_allows_a_group_to_receive_a_specific_restricted_role(): void
+    {
+        Notification::fake();
+
+        $timer = $this->createTimerWithTags(['Friendly'], [
+            'structure_name' => 'Restricted Fort',
+            'role_id' => 7,
+        ]);
+
+        $group = $this->createSlackNotificationGroup();
+        NotificationGroupTagFilter::create([
+            'notification_group_id' => $group->id,
+            'allowed_role_ids' => ['7'],
+            'allowed_tag_ids' => [],
+            'blocked_tag_ids' => [],
+        ]);
+
+        $this->seedTimerboardSettings([
+            'notification_enabled' => true,
+        ]);
+
+        app(TimerNotificationService::class)->sendNewTimer($timer);
+
+        Notification::assertSentOnDemand(NewTimer::class);
     }
 
     private function createSlackNotificationGroup(): NotificationGroup

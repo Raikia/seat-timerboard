@@ -24,21 +24,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="notification_role_ids">Filter by Access Role</label>
-                    <select name="notification_role_ids[]" id="notification_role_ids" class="form-control select2" multiple style="width: 100%;">
-                        <option value="public" {{ in_array('public', $notificationRoleIds) ? 'selected' : '' }}>Public (Everyone)</option>
-                        @foreach($roles as $role)
-                            <option value="{{ $role->id }}" {{ in_array((string)$role->id, $notificationRoleIds) ? 'selected' : '' }}>
-                                {{ $role->title }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <small class="text-muted">Only send notifications if the timer is restricted to one of these roles. Select "Public" to include public timers.</small>
-                </div>
-
-                <div class="form-group">
                     <label class="d-block">Per-Group Tag Filters</label>
-                    <small class="text-muted d-block mb-3">Use this when different Discord or Slack groups should receive different timer tags. If Allowed Tags is empty, that group receives all timer tags unless Blocked Tags matches. Blocked Tags always wins.</small>
+                    <small class="text-muted d-block mb-3">Each notification group can decide which timer access roles it receives, plus which tags it allows or blocks. Groups default to public timers only unless you add more access roles. Blocked Tags always wins.</small>
 
                     @if($notificationGroups->isEmpty())
                         <div class="alert alert-secondary mb-0">
@@ -49,6 +36,7 @@
                             @foreach($notificationGroups as $group)
                                 @php($groupFilter = $notificationGroupTagFilters->get($group->id))
                                 @php($integrationSummary = $group->integrations->pluck('name')->filter()->implode(', '))
+                                @php($allowedRoleIds = collect($groupFilter->allowed_role_ids ?? ['public'])->map(fn ($id) => (string) $id)->all())
                                 @php($allowedCount = count($groupFilter->allowed_tag_ids ?? []))
                                 @php($blockedCount = count($groupFilter->blocked_tag_ids ?? []))
                                 <div class="card mb-3">
@@ -72,7 +60,7 @@
                                                 <div class="text-right">
                                                     <span class="badge badge-secondary">{{ $group->alerts->count() }} alert{{ $group->alerts->count() === 1 ? '' : 's' }}</span>
                                                     <div class="text-muted small mt-1">
-                                                        {{ $allowedCount }} allowed, {{ $blockedCount }} blocked
+                                                        {{ count($allowedRoleIds) }} role{{ count($allowedRoleIds) === 1 ? '' : 's' }}, {{ $allowedCount }} allowed, {{ $blockedCount }} blocked
                                                     </div>
                                                 </div>
                                             </div>
@@ -85,6 +73,26 @@
                                         aria-labelledby="notification-group-filter-heading-{{ $group->id }}"
                                         data-parent="#notification-group-filter-accordion">
                                         <div class="card-body">
+                                            <div class="form-group mb-3">
+                                                <label for="notification_group_filters_{{ $group->id }}_roles">Access Roles</label>
+                                                <select
+                                                    name="notification_group_filters[{{ $loop->index }}][allowed_role_ids][]"
+                                                    id="notification_group_filters_{{ $group->id }}_roles"
+                                                    class="form-control"
+                                                    multiple
+                                                    size="{{ min(max($roles->count() + 1, 4), 10) }}">
+                                                    <option value="public" {{ in_array('public', $allowedRoleIds, true) ? 'selected' : '' }}>
+                                                        Public (Everyone)
+                                                    </option>
+                                                    @foreach($roles as $role)
+                                                        <option value="{{ $role->id }}" {{ in_array((string) $role->id, $allowedRoleIds, true) ? 'selected' : '' }}>
+                                                            {{ $role->title }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <small class="text-muted">Defaults to public timers only. Add one or more roles if this group should also receive restricted timers for those roles.</small>
+                                            </div>
+
                                             <div class="form-group mb-3">
                                                 <label for="notification_group_filters_{{ $group->id }}_allowed">Allowed Tags</label>
                                                 <select

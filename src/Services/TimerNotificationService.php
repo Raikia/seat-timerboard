@@ -48,19 +48,12 @@ class TimerNotificationService
             return;
         }
 
-        $settings = TimerboardSetting::whereIn('setting', ['notification_enabled', 'notification_role_ids'])
+        $settings = TimerboardSetting::whereIn('setting', ['notification_enabled'])
             ->pluck('value', 'setting');
 
         $enabled = filter_var($settings['notification_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (! $enabled) {
-            return;
-        }
-
-        $roleIds = json_decode($settings['notification_role_ids'] ?? '[]', true) ?? [];
-        $timerRole = $timer->role_id ? (string) $timer->role_id : 'public';
-
-        if (! in_array($timerRole, $roleIds, true)) {
             return;
         }
 
@@ -74,7 +67,7 @@ class TimerNotificationService
             return;
         }
 
-        $groups = $this->filterGroupsByTimerTags($groups, $timer);
+        $groups = $this->filterGroupsByTimerRules($groups, $timer);
 
         if ($groups->isEmpty()) {
             logger()->debug(sprintf('[Timerboard][%d] No notification groups matched the timer tag filters.', $timer->id));
@@ -89,8 +82,9 @@ class TimerNotificationService
         });
     }
 
-    private function filterGroupsByTimerTags($groups, Timer $timer)
+    private function filterGroupsByTimerRules($groups, Timer $timer)
     {
+        $timerRole = $timer->role_id ? (string) $timer->role_id : 'public';
         $timerTagIds = $timer->tags->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -100,8 +94,23 @@ class TimerNotificationService
             ->get()
             ->keyBy('notification_group_id');
 
-        return $groups->filter(function (NotificationGroup $group) use ($filters, $timerTagIds) {
+        return $groups->filter(function (NotificationGroup $group) use ($filters, $timerRole, $timerTagIds) {
             $filter = $filters->get($group->id);
+
+            $allowedRoleIds = collect($filter?->allowed_role_ids ?? ['public'])
+                ->filter(fn ($roleId) => filled($roleId))
+                ->map(fn ($roleId) => (string) $roleId)
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($allowedRoleIds)) {
+                $allowedRoleIds = ['public'];
+            }
+
+            if (! in_array($timerRole, $allowedRoleIds, true)) {
+                return false;
+            }
 
             if (! $filter) {
                 return true;
