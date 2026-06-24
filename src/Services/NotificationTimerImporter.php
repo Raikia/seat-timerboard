@@ -14,9 +14,13 @@ use Seat\Eveapi\Models\Corporation\CorporationInfo;
 use Seat\Eveapi\Models\RefreshToken;
 use Seat\Eveapi\Models\Sde\MapDenormalize;
 use Seat\Eveapi\Models\Universe\UniverseName;
+use Seat\Eveapi\Models\Universe\UniverseStructure;
+use Seat\Eveapi\Services\EseyeClient;
 
 class NotificationTimerImporter
 {
+    private const UNIVERSE_STRUCTURES_SCOPE = 'esi-universe.read_structures.v1';
+
     private const TAGS = [
         'Auto Imported' => '#6c757d',
         'Friendly' => '#28a745',
@@ -144,7 +148,7 @@ class NotificationTimerImporter
         return $this->buildBasePayload($notification, $trackingContext, [
             'system' => $this->resolveSystemName($systemId),
             'structure_type' => $structureType,
-            'structure_name' => null,
+            'structure_name' => $this->resolveStructureName($structureId, $notification->character_id, $trackingContext['recipient_corporation_id'] ?? null),
             'owner_corporation' => $this->notificationValue($text, ['ownerCorpName']) ?: $trackingContext['recipient_corporation_name'],
             'attacker_corporation' => null,
             'eve_time' => $eveTime,
@@ -179,7 +183,7 @@ class NotificationTimerImporter
         return $this->buildBasePayload($notification, $trackingContext, [
             'system' => $this->resolveSystemName($systemId),
             'structure_type' => $structureType,
-            'structure_name' => null,
+            'structure_name' => $this->resolveStructureName($structureId, $notification->character_id, $trackingContext['recipient_corporation_id'] ?? null),
             'owner_corporation' => $trackingContext['recipient_corporation_name'],
             'attacker_corporation' => null,
             'eve_time' => $eveTime,
@@ -211,7 +215,7 @@ class NotificationTimerImporter
         return $this->buildBasePayload($notification, $trackingContext, [
             'system' => $this->resolveLocationName($this->notificationValue($text, ['planetID']), $systemId),
             'structure_type' => 'Skyhook',
-            'structure_name' => null,
+            'structure_name' => $this->resolveStructureName($itemId, $notification->character_id, $trackingContext['recipient_corporation_id'] ?? null),
             'owner_corporation' => $trackingContext['recipient_corporation_name'],
             'attacker_corporation' => null,
             'eve_time' => $eveTime,
@@ -522,6 +526,93 @@ class NotificationTimerImporter
 
         return optional(UniverseName::where('entity_id', $characterId)->first())->name
             ?: 'Character #' . $characterId;
+    }
+
+    private function resolveStructureName($structureId, ?int $characterId = null, ?int $corporationId = null): ?string
+    {
+        $structureId = (int) $structureId;
+
+        if ($structureId <= 0) {
+            return null;
+        }
+
+        $structure = UniverseStructure::find($structureId);
+
+        if ($structure && filled($structure->name)) {
+            return $structure->name;
+        }
+
+        $token = $this->resolveStructureLookupToken($characterId, $corporationId);
+
+        if (!$token) {
+            return null;
+        }
+
+        try {
+            $response = (new EseyeClient())
+                ->setAuthentication($token)
+                ->invoke('get', '/universe/structures/{structure_id}/', [
+                    'structure_id' => $structureId,
+                ]);
+
+            $body = $response->getBody();
+
+            if (!$body || empty($body->name)) {
+                return null;
+            }
+
+            UniverseStructure::updateOrCreate(
+                ['structure_id' => $structureId],
+                [
+                    'name' => $body->name,
+                    'owner_id' => $body->owner_id ?? null,
+                    'solar_system_id' => $body->solar_system_id ?? null,
+                    'type_id' => $body->type_id ?? null,
+                    'x' => $body->position->x ?? null,
+                    'y' => $body->position->y ?? null,
+                    'z' => $body->position->z ?? null,
+                ]
+            );
+
+            return $body->name;
+        } catch (\Throwable $e) {
+            Log::debug('Timerboard structure name lookup failed.', [
+                'structure_id' => $structureId,
+                'character_id' => $characterId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function resolveStructureLookupToken(?int $characterId, ?int $corporationId): ?RefreshToken
+    {
+        if ($characterId) {
+            $preferredToken = RefreshToken::find($characterId);
+
+            if ($preferredToken && $this->tokenHasUniverseStructureScope($preferredToken)) {
+                return $preferredToken;
+            }
+        }
+
+        if (!$corporationId) {
+            return null;
+        }
+
+        return RefreshToken::query()
+            ->whereHas('affiliation', function ($query) use ($corporationId) {
+                $query->where('corporation_id', $corporationId);
+            })
+            ->get()
+            ->first(function (RefreshToken $token) {
+                return $this->tokenHasUniverseStructureScope($token);
+            });
+    }
+
+    private function tokenHasUniverseStructureScope(RefreshToken $token): bool
+    {
+        return in_array(self::UNIVERSE_STRUCTURES_SCOPE, $token->scopes ?: [], true);
     }
 
     private function structureTypeFromTypeId($typeId): ?string
