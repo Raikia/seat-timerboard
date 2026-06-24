@@ -2,12 +2,16 @@
 
 namespace Raikia\SeatTimerboard\Http\Controllers;
 
+use Illuminate\Support\Facades\DB;
 use Seat\Web\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Raikia\SeatTimerboard\Models\NotificationGroupTagFilter;
 use Raikia\SeatTimerboard\Models\Tag;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Corporation\CorporationInfo;
 use Seat\Eveapi\Models\Universe\UniverseName;
+use Seat\Notifications\Models\NotificationGroup;
+use Seat\Web\Models\Acl\Role;
 
 class SettingsController extends Controller
 {
@@ -24,6 +28,16 @@ class SettingsController extends Controller
 
         $notifRoles = \Raikia\SeatTimerboard\Models\TimerboardSetting::find('notification_role_ids');
         $notificationRoleIds = $notifRoles ? json_decode($notifRoles->value, true) : [];
+        $notificationGroups = NotificationGroup::with(['alerts', 'integrations'])
+            ->whereHas('alerts', function ($query) {
+                $query->where('alert', 'seat_timerboard_new_timer');
+            })
+            ->orderBy('name')
+            ->get();
+        $notificationGroupTagFilters = NotificationGroupTagFilter::query()
+            ->whereIn('notification_group_id', $notificationGroups->pluck('id'))
+            ->get()
+            ->keyBy('notification_group_id');
 
         $trackedCorporationIds = $this->jsonSetting('tracked_corporation_ids');
         $trackedAllianceIds = $this->jsonSetting('tracked_alliance_ids');
@@ -37,6 +51,8 @@ class SettingsController extends Controller
             'localTimeFormat',
             'notificationEnabled',
             'notificationRoleIds',
+            'notificationGroups',
+            'notificationGroupTagFilters',
             'trackedCorporations',
             'trackedAlliances'
         ));
@@ -45,7 +61,7 @@ class SettingsController extends Controller
     public function storeDefaultRole(Request $request)
     {
         $request->validate([
-            'default_timer_role' => 'nullable|integer', // exists:roles,id might fail if roles table name is different, but assuming standard. Safest is just integer or strict validation if we are sure.
+            'default_timer_role' => 'nullable|integer|exists:roles,id',
         ]);
 
         \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
@@ -97,17 +113,64 @@ class SettingsController extends Controller
         $request->validate([
             'notification_enabled' => 'nullable|in:on,1,true',
             'notification_role_ids' => 'nullable|array',
+            'notification_role_ids.*' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    if ($value === 'public') {
+                        return;
+                    }
+
+                    if (!ctype_digit((string) $value) || !Role::whereKey((int) $value)->exists()) {
+                        $fail('The selected notification role is invalid.');
+                    }
+                },
+            ],
+            'notification_group_filters' => 'nullable|array',
+            'notification_group_filters.*.notification_group_id' => 'required|integer|exists:notification_groups,id',
+            'notification_group_filters.*.allowed_tag_ids' => 'nullable|array',
+            'notification_group_filters.*.allowed_tag_ids.*' => 'integer|exists:seat_timerboard_tags,id',
+            'notification_group_filters.*.blocked_tag_ids' => 'nullable|array',
+            'notification_group_filters.*.blocked_tag_ids.*' => 'integer|exists:seat_timerboard_tags,id',
         ]);
 
-        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
-            ['setting' => 'notification_enabled'],
-            ['value' => $request->has('notification_enabled')]
-        );
+        $groupFilters = collect($request->input('notification_group_filters', []))
+            ->filter(fn ($filter) => !empty($filter['notification_group_id']))
+            ->keyBy(fn ($filter) => (int) $filter['notification_group_id']);
+        $groupIds = $groupFilters->pluck('notification_group_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
-        \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
-            ['setting' => 'notification_role_ids'],
-            ['value' => json_encode($request->input('notification_role_ids', []))]
-        );
+        DB::transaction(function () use ($request, $groupFilters, $groupIds) {
+            \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+                ['setting' => 'notification_enabled'],
+                ['value' => $request->has('notification_enabled')]
+            );
+
+            \Raikia\SeatTimerboard\Models\TimerboardSetting::updateOrCreate(
+                ['setting' => 'notification_role_ids'],
+                ['value' => json_encode($request->input('notification_role_ids', []))]
+            );
+
+            if (!empty($groupIds)) {
+                NotificationGroupTagFilter::whereIn('notification_group_id', $groupIds)->delete();
+            }
+
+            $groupFilters->each(function (array $filter) {
+                $allowedTagIds = $this->normalizeTagIds($filter['allowed_tag_ids'] ?? []);
+                $blockedTagIds = $this->normalizeTagIds($filter['blocked_tag_ids'] ?? []);
+
+                if (empty($allowedTagIds) && empty($blockedTagIds)) {
+                    return;
+                }
+
+                NotificationGroupTagFilter::create([
+                    'notification_group_id' => (int) $filter['notification_group_id'],
+                    'allowed_tag_ids' => $allowedTagIds,
+                    'blocked_tag_ids' => $blockedTagIds,
+                ]);
+            });
+        });
 
         return redirect()->route('timerboard.settings')->with('success', 'Notification settings updated successfully.');
     }
@@ -116,7 +179,7 @@ class SettingsController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'color' => 'required|string|max:7',
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
         Tag::create($request->only('name', 'color'));
@@ -128,7 +191,7 @@ class SettingsController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'color' => 'required|string|max:7',
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ]);
 
         $tag->update($request->only('name', 'color'));
@@ -138,7 +201,35 @@ class SettingsController extends Controller
 
     public function destroyTag(Tag $tag)
     {
-        $tag->delete();
+        DB::transaction(function () use ($tag) {
+            NotificationGroupTagFilter::query()
+                ->get()
+                ->each(function (NotificationGroupTagFilter $filter) use ($tag) {
+                    $allowedTagIds = collect($filter->allowed_tag_ids ?? [])
+                        ->reject(fn ($id) => (int) $id === (int) $tag->id)
+                        ->map(fn ($id) => (int) $id)
+                        ->values()
+                        ->all();
+                    $blockedTagIds = collect($filter->blocked_tag_ids ?? [])
+                        ->reject(fn ($id) => (int) $id === (int) $tag->id)
+                        ->map(fn ($id) => (int) $id)
+                        ->values()
+                        ->all();
+
+                    if (empty($allowedTagIds) && empty($blockedTagIds)) {
+                        $filter->delete();
+
+                        return;
+                    }
+
+                    $filter->update([
+                        'allowed_tag_ids' => $allowedTagIds,
+                        'blocked_tag_ids' => $blockedTagIds,
+                    ]);
+                });
+
+            $tag->delete();
+        });
 
         return redirect()->route('timerboard.settings')->with('success', 'Tag deleted successfully.');
     }
@@ -155,10 +246,13 @@ class SettingsController extends Controller
 
         $results = CorporationInfo::player()
             ->where('name', 'like', '%' . $escapedQuery . '%')
-            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
             ->orderBy('name')
-            ->limit(20)
+            ->limit(100)
             ->get(['corporation_id', 'name'])
+            ->sort(function ($left, $right) use ($query) {
+                return $this->compareSearchLabels($left->name, $right->name, $query);
+            })
+            ->take(20)
             ->map(function ($corporation) {
                 return [
                     'id' => $corporation->corporation_id,
@@ -182,10 +276,13 @@ class SettingsController extends Controller
 
         $results = Alliance::query()
             ->where('name', 'like', '%' . $escapedQuery . '%')
-            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
             ->orderBy('name')
-            ->limit(20)
+            ->limit(100)
             ->get(['alliance_id', 'name'])
+            ->sort(function ($left, $right) use ($query) {
+                return $this->compareSearchLabels($left->name, $right->name, $query);
+            })
+            ->take(20)
             ->map(function ($alliance) {
                 return [
                     'id' => $alliance->alliance_id,
@@ -265,5 +362,27 @@ class SettingsController extends Controller
     private function escapeLike(string $value): string
     {
         return addcslashes($value, '\\%_');
+    }
+
+    private function normalizeTagIds(array $tagIds): array
+    {
+        return collect($tagIds)
+            ->filter(fn ($id) => filled($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function compareSearchLabels(string $left, string $right, string $query): int
+    {
+        $leftStartsWith = str_starts_with(strtolower($left), strtolower($query));
+        $rightStartsWith = str_starts_with(strtolower($right), strtolower($query));
+
+        if ($leftStartsWith !== $rightStartsWith) {
+            return $leftStartsWith ? -1 : 1;
+        }
+
+        return strcasecmp($left, $right);
     }
 }

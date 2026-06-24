@@ -195,10 +195,14 @@ class TimerboardController extends Controller
         $results = \Seat\Eveapi\Models\Sde\MapDenormalize::where('itemName', 'like', '%' . $escapedQuery . '%')
             ->whereIn('groupID', [5, 7, 8])
             ->select('itemID', 'itemName', 'typeID', 'solarSystemID', 'groupID')
-            ->orderByRaw('CASE WHEN itemName LIKE ? THEN 0 ELSE 1 END', [$escapedQuery . '%'])
             ->orderBy('itemName')
-            ->limit(20)
-            ->get();
+            ->limit(100)
+            ->get()
+            ->sort(function ($left, $right) use ($query) {
+                return $this->compareSearchLabels($left->itemName, $right->itemName, $query);
+            })
+            ->take(20)
+            ->values();
 
         $formatted = $results->map(function ($item) {
             return [
