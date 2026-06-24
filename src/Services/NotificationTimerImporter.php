@@ -124,6 +124,8 @@ class NotificationTimerImporter
                 return $this->buildStructureReinforcementPayload($notification, $trackingContext);
             case 'SkyhookLostShields':
                 return $this->buildSkyhookReinforcementPayload($notification, $trackingContext);
+            case 'MercenaryDenReinforced':
+                return $this->buildMercenaryDenReinforcedPayload($notification, $trackingContext);
             case 'OrbitalReinforced':
                 return $this->buildOrbitalReinforcedPayload($notification, $trackingContext);
             case 'SovStructureReinforced':
@@ -230,6 +232,51 @@ class NotificationTimerImporter
                 $itemId,
                 $systemId,
                 $eveTime->timestamp,
+            ],
+        ]);
+    }
+
+    private function buildMercenaryDenReinforcedPayload(CharacterNotification $notification, array $trackingContext): ?array
+    {
+        $text = $this->notificationText($notification);
+        $exitTimestamp = $this->numericNotificationValue($text, ['timestampExited']);
+        $eveTime = $exitTimestamp ? $this->mssqlTimestampToDate($exitTimestamp) : null;
+        $systemId = $this->numericNotificationValue($text, ['solarsystemID', 'solarSystemID']);
+        $planetId = $this->numericNotificationValue($text, ['planetID'])
+            ?? $this->extractInteger($this->notificationArrayValue($text, 'planetShowInfoData', 2));
+        $itemId = $this->numericNotificationValue($text, ['itemID'])
+            ?? $this->extractInteger($this->notificationArrayValue($text, 'mercenaryDenShowInfoData', 2));
+        $typeId = $this->numericNotificationValue($text, ['typeID'])
+            ?? $this->extractInteger($this->notificationArrayValue($text, 'mercenaryDenShowInfoData', 1));
+
+        if (!$eveTime || !$systemId) {
+            return null;
+        }
+
+        return $this->buildBasePayload($notification, $trackingContext, [
+            'system' => $this->resolveLocationName($planetId, $systemId),
+            'structure_type' => $this->structureTypeFromTypeId($typeId) ?: 'Mercenary Den',
+            'structure_name' => $this->resolveStructureName(
+                $itemId,
+                $notification->character_id,
+                $trackingContext['recipient_corporation_id'] ?? null
+            ),
+            'owner_corporation' => $trackingContext['recipient_corporation_name'],
+            'attacker_corporation' => $this->notificationValue($text, ['aggressorCorporationName']),
+            'eve_time' => $eveTime,
+            'tag_names' => ['Auto Imported', 'Friendly', 'Reinforced'],
+            'note_lines' => [
+                $itemId ? 'Structure ID: ' . $itemId : null,
+                $planetId ? 'Planet ID: ' . $planetId : null,
+                $this->notificationValue($text, ['aggressorAllianceName']) ? 'Attacker alliance: ' . $this->notificationValue($text, ['aggressorAllianceName']) : null,
+                $this->resolveCharacterName($this->numericNotificationValue($text, ['aggressorCharacterID'])) ? 'Attacker character: ' . $this->resolveCharacterName($this->numericNotificationValue($text, ['aggressorCharacterID'])) : null,
+                $this->numericNotificationValue($text, ['timestampEntered']) ? 'Reinforcement entered (UTC): ' . $this->mssqlTimestampToDate($this->numericNotificationValue($text, ['timestampEntered']))->format('Y.m.d H:i:s') : null,
+            ],
+            'fingerprint_parts' => [
+                $itemId,
+                $systemId,
+                $typeId,
+                $exitTimestamp,
             ],
         ]);
     }
@@ -415,6 +462,45 @@ class NotificationTimerImporter
         }
 
         return null;
+    }
+
+    private function notificationArrayValue(array $text, string $key, int $index)
+    {
+        $value = $text[$key] ?? null;
+
+        if (!is_array($value) || !array_key_exists($index, $value)) {
+            return null;
+        }
+
+        return $value[$index];
+    }
+
+    private function numericNotificationValue(array $text, array $keys): ?int
+    {
+        return $this->extractInteger($this->notificationValue($text, $keys));
+    }
+
+    private function extractInteger($value): ?int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_float($value)) {
+            return (int) $value;
+        }
+
+        if (!is_string($value) || blank($value)) {
+            return null;
+        }
+
+        preg_match_all('/-?\d+/', html_entity_decode($value, ENT_QUOTES | ENT_HTML5), $matches);
+
+        if (empty($matches[0])) {
+            return null;
+        }
+
+        return (int) end($matches[0]);
     }
 
     private function eveDurationFromNotificationTimestamp(CharacterNotification $notification, $duration): ?Carbon

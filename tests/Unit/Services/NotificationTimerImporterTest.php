@@ -98,6 +98,54 @@ class NotificationTimerImporterTest extends TestCase
         $this->assertSame(1, Timer::count());
     }
 
+    public function test_it_imports_a_mercenary_den_reinforcement_timer(): void
+    {
+        $this->seedTimerboardSettings([
+            'tracked_corporation_ids' => [98765],
+        ]);
+        $this->seedTrackedCharacterContext();
+        $this->seedReferenceLocationData();
+        $this->mockSavedDispatch();
+
+        $notification = $this->createNotification([
+            'type' => 'MercenaryDenReinforced',
+            'text' => implode("\n", [
+                'aggressorAllianceName: Calculated Disorder',
+                'aggressorCharacterID: 2114190616',
+                'aggressorCorporationName: Sith Navy',
+                'itemID: "&amp;id001 1054221260563"',
+                'mercenaryDenShowInfoData:',
+                '- showinfo',
+                '- 85230',
+                '- "*id001"',
+                'planetID: 40121487',
+                'planetShowInfoData:',
+                '- showinfo',
+                '- 11',
+                '- 40121487',
+                'solarsystemID: 30000142',
+                'timestampEntered: 134267066949210942',
+                'timestampExited: 134267924529210942',
+                'typeID: 85230',
+            ]),
+        ]);
+
+        $timer = app(NotificationTimerImporter::class)->import($notification);
+
+        $this->assertNotNull($timer);
+        $this->assertSame('Jita IV', $timer->system);
+        $this->assertSame('Mercenary Den', $timer->structure_type);
+        $this->assertSame('Friendly Corp', $timer->owner_corporation);
+        $this->assertSame('Sith Navy', $timer->attacker_corporation);
+        $this->assertSame('MercenaryDenReinforced', $timer->source_notification_type);
+        $this->assertEqualsCanonicalizing(
+            ['Auto Imported', 'Friendly', 'Reinforced'],
+            $timer->tags()->pluck('name')->all()
+        );
+        $this->assertStringContainsString('Structure ID: 1054221260563', $timer->notes);
+        $this->assertStringContainsString('Attacker alliance: Calculated Disorder', $timer->notes);
+    }
+
     private function seedTrackedCharacterContext(bool $includeAlliance = false): void
     {
         CharacterInfo::create([
@@ -126,6 +174,7 @@ class NotificationTimerImporterTest extends TestCase
         ]));
 
         UniverseName::create(['entity_id' => 98765, 'name' => 'Friendly Corp', 'category' => 'corporation']);
+        UniverseName::create(['entity_id' => 2114190616, 'name' => 'Test Aggressor', 'category' => 'character']);
 
         if ($includeAlliance) {
             UniverseName::create(['entity_id' => 12345, 'name' => 'Friendly Alliance', 'category' => 'alliance']);
