@@ -145,12 +145,12 @@ class NotificationTimerImporter
             'system' => $this->resolveSystemName($systemId),
             'structure_type' => $structureType,
             'structure_name' => $this->resolveStructureName($structureId, $notification->character_id, $trackingContext['recipient_corporation_id'] ?? null),
-            'owner_corporation' => $this->notificationValue($text, ['ownerCorpName']) ?: $trackingContext['recipient_corporation_name'],
+            'owner_corporation' => $this->cleanNotificationStringValue($text, ['ownerCorpName']) ?: $trackingContext['recipient_corporation_name'],
             'attacker_corporation' => null,
             'eve_time' => $eveTime,
             'tag_names' => ['Auto Imported', 'Friendly', 'Anchoring'],
             'note_lines' => [
-                'Owner corporation: ' . ($this->notificationValue($text, ['ownerCorpName']) ?: $trackingContext['recipient_corporation_name']),
+                'Owner corporation: ' . ($this->cleanNotificationStringValue($text, ['ownerCorpName']) ?: $trackingContext['recipient_corporation_name']),
                 $structureId ? 'Structure ID: ' . $structureId : null,
                 $this->notificationValue($text, ['vulnerableTime']) ? 'Vulnerability window: ' . $this->eveDurationToString($this->notificationValue($text, ['vulnerableTime'])) : null,
             ],
@@ -255,13 +255,13 @@ class NotificationTimerImporter
                 $trackingContext['recipient_corporation_id'] ?? null
             ),
             'owner_corporation' => $trackingContext['recipient_corporation_name'],
-            'attacker_corporation' => $this->notificationValue($text, ['aggressorCorporationName']),
+            'attacker_corporation' => $this->cleanNotificationStringValue($text, ['aggressorCorporationName']),
             'eve_time' => $eveTime,
             'tag_names' => ['Auto Imported', 'Friendly', 'Reinforced'],
             'note_lines' => [
                 $itemId ? 'Structure ID: ' . $itemId : null,
                 $planetId ? 'Planet ID: ' . $planetId : null,
-                $this->notificationValue($text, ['aggressorAllianceName']) ? 'Attacker alliance: ' . $this->notificationValue($text, ['aggressorAllianceName']) : null,
+                $this->cleanNotificationStringValue($text, ['aggressorAllianceName']) ? 'Attacker alliance: ' . $this->cleanNotificationStringValue($text, ['aggressorAllianceName']) : null,
                 $this->resolveCharacterName($this->numericNotificationValue($text, ['aggressorCharacterID'])) ? 'Attacker character: ' . $this->resolveCharacterName($this->numericNotificationValue($text, ['aggressorCharacterID'])) : null,
                 $this->numericNotificationValue($text, ['timestampEntered']) ? 'Reinforcement entered (UTC): ' . $this->mssqlTimestampToDate($this->numericNotificationValue($text, ['timestampEntered']))->format('Y.m.d H:i:s') : null,
             ],
@@ -471,6 +471,23 @@ class NotificationTimerImporter
     private function numericNotificationValue(array $text, array $keys): ?int
     {
         return $this->extractInteger($this->notificationValue($text, $keys));
+    }
+
+    private function cleanNotificationStringValue(array $text, array $keys): ?string
+    {
+        $value = $this->notificationValue($text, $keys);
+
+        if (!is_string($value) || blank($value)) {
+            return null;
+        }
+
+        $cleaned = function_exists('clean_ccp_html')
+            ? clean_ccp_html($value)
+            : strip_tags(html_entity_decode($value, ENT_QUOTES | ENT_HTML5));
+
+        $cleaned = trim($cleaned);
+
+        return $cleaned !== '' ? $cleaned : null;
     }
 
     private function extractInteger($value): ?int

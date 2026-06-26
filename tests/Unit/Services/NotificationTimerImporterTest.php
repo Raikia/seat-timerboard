@@ -110,9 +110,9 @@ class NotificationTimerImporterTest extends TestCase
         $notification = $this->createNotification([
             'type' => 'MercenaryDenReinforced',
             'text' => implode("\n", [
-                'aggressorAllianceName: Calculated Disorder',
+                'aggressorAllianceName: \'<a href="showinfo:16159//99015056">Calculated Disorder</a>\'',
                 'aggressorCharacterID: 2114190616',
-                'aggressorCorporationName: Sith Navy',
+                'aggressorCorporationName: \'<a href="showinfo:2//98328437">Sith Navy</a>\'',
                 'itemID: "&amp;id001 1054221260563"',
                 'mercenaryDenShowInfoData:',
                 '- showinfo',
@@ -144,6 +144,7 @@ class NotificationTimerImporterTest extends TestCase
         );
         $this->assertStringContainsString('Structure ID: 1054221260563', $timer->notes);
         $this->assertStringContainsString('Attacker alliance: Calculated Disorder', $timer->notes);
+        $this->assertStringNotContainsString('<a href=', $timer->notes);
     }
 
     private function seedTrackedCharacterContext(bool $includeAlliance = false): void
