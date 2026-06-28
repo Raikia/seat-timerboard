@@ -39,6 +39,10 @@ class NotificationTimerImporter
             return null;
         }
 
+        if ($payload['eve_time']->lessThanOrEqualTo(Carbon::now('UTC'))) {
+            return null;
+        }
+
         $existing = Timer::where('import_fingerprint', $payload['import_fingerprint'])->first();
 
         if ($existing) {

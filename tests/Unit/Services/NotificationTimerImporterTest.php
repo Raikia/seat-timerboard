@@ -32,6 +32,7 @@ class NotificationTimerImporterTest extends TestCase
         $this->seedTrackedCharacterContext(includeAlliance: true);
         $this->seedReferenceLocationData();
         $this->mockSavedDispatch();
+        $futureReinforceTime = $this->dateToMssqlTimestamp(now('UTC')->addHours(2));
 
         $notification = $this->createNotification([
             'text' => implode("\n", [
@@ -40,7 +41,7 @@ class NotificationTimerImporterTest extends TestCase
                 'aggressorID: 77777',
                 'planetID: 40121487',
                 'typeID: 2233',
-                'reinforceExitTime: 134259524910000000',
+                'reinforceExitTime: ' . $futureReinforceTime,
                 'solarSystemID: 30000142',
             ]),
         ]);
@@ -68,6 +69,7 @@ class NotificationTimerImporterTest extends TestCase
         $this->seedTrackedCharacterContext();
         $this->seedReferenceLocationData();
         $this->mockSavedDispatch();
+        $futureReinforceTime = $this->dateToMssqlTimestamp(now('UTC')->addHours(2));
 
         $payload = [
             'character_id' => 90000001,
@@ -80,7 +82,7 @@ class NotificationTimerImporterTest extends TestCase
             'text' => implode("\n", [
                 'planetID: 40121487',
                 'typeID: 2233',
-                'reinforceExitTime: 134259524910000000',
+                'reinforceExitTime: ' . $futureReinforceTime,
                 'solarSystemID: 30000142',
             ]),
         ];
@@ -106,6 +108,8 @@ class NotificationTimerImporterTest extends TestCase
         $this->seedTrackedCharacterContext();
         $this->seedReferenceLocationData();
         $this->mockSavedDispatch();
+        $enteredAt = now('UTC')->subHour();
+        $exitAt = now('UTC')->addHours(2);
 
         $notification = $this->createNotification([
             'type' => 'MercenaryDenReinforced',
@@ -124,8 +128,8 @@ class NotificationTimerImporterTest extends TestCase
                 '- 11',
                 '- 40121487',
                 'solarsystemID: 30000142',
-                'timestampEntered: 134267066949210942',
-                'timestampExited: 134267924529210942',
+                'timestampEntered: ' . $this->dateToMssqlTimestamp($enteredAt),
+                'timestampExited: ' . $this->dateToMssqlTimestamp($exitAt),
                 'typeID: 85230',
             ]),
         ]);
@@ -145,6 +149,32 @@ class NotificationTimerImporterTest extends TestCase
         $this->assertStringContainsString('Structure ID: 1054221260563', $timer->notes);
         $this->assertStringContainsString('Attacker alliance: Calculated Disorder', $timer->notes);
         $this->assertStringNotContainsString('<a href=', $timer->notes);
+    }
+
+    public function test_it_ignores_notifications_with_reinforcement_times_in_the_past(): void
+    {
+        $this->seedTimerboardSettings([
+            'tracked_corporation_ids' => [98765],
+        ]);
+        $this->seedTrackedCharacterContext(includeAlliance: true);
+        $this->seedReferenceLocationData();
+
+        $notification = $this->createNotification([
+            'text' => implode("\n", [
+                'aggressorAllianceID: 12345',
+                'aggressorCorpID: 55555',
+                'aggressorID: 77777',
+                'planetID: 40121487',
+                'typeID: 2233',
+                'reinforceExitTime: ' . $this->dateToMssqlTimestamp(now('UTC')->subHour()),
+                'solarSystemID: 30000142',
+            ]),
+        ]);
+
+        $timer = app(NotificationTimerImporter::class)->import($notification);
+
+        $this->assertNull($timer);
+        $this->assertSame(0, Timer::count());
     }
 
     private function seedTrackedCharacterContext(bool $includeAlliance = false): void
@@ -225,5 +255,10 @@ class NotificationTimerImporterTest extends TestCase
             'is_read' => false,
             'text' => '',
         ], $overrides)));
+    }
+
+    private function dateToMssqlTimestamp(\Carbon\CarbonInterface $date): string
+    {
+        return (string) (($date->copy()->setTimezone('UTC')->timestamp + 11644473600) * 10000000);
     }
 }
