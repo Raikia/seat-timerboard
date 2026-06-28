@@ -7,6 +7,47 @@ use Seat\Web\Models\User;
 
 class Timer extends Model
 {
+    private const STRUCTURE_TYPES = [
+        'Ansiblex' => 'Ansiblex Jump Gate',
+        'Astrahus' => 'Astrahus',
+        'Athanor' => 'Athanor',
+        'Azbel' => 'Azbel',
+        'POCO' => 'Customs Office',
+        'Fortizar' => 'Fortizar',
+        'Keepstar' => 'Keepstar',
+        'Mercenary Den' => 'Mercenary Den',
+        'Metenox' => 'Metenox Moon Drill',
+        'Pharolux' => 'Pharolux Cyno Beacon',
+        'POS' => 'POS',
+        'Raitaru' => 'Raitaru',
+        'Skyhook' => 'Skyhook',
+        'Sovereignty Hub' => 'Sovereignty Hub',
+        'Sotiyo' => 'Sotiyo',
+        'Tatara' => 'Tatara',
+        'Tenebrex' => 'Tenebrex Jammer',
+        'Other' => 'Other',
+    ];
+
+    private const STRUCTURE_IMAGE_TYPE_IDS = [
+        'Ansiblex' => 35841,
+        'Astrahus' => 35832,
+        'Athanor' => 35835,
+        'Azbel' => 35826,
+        'POCO' => 2233,
+        'Fortizar' => 35833,
+        'Keepstar' => 35834,
+        'Mercenary Den' => 85230,
+        'Metenox' => 81826,
+        'Pharolux' => 35840,
+        'POS' => 16213,
+        'Raitaru' => 35825,
+        'Skyhook' => 81080,
+        'Sovereignty Hub' => 32458,
+        'Sotiyo' => 35827,
+        'Tatara' => 35836,
+        'Tenebrex' => 37534,
+    ];
+
     protected $table = 'seat_timerboard_timers';
 
     protected $fillable = [
@@ -62,29 +103,14 @@ class Timer extends Model
         return filled($this->sync_origin_instance_uuid) && filled($this->sync_origin_timer_id);
     }
 
+    public static function structureTypes(): array
+    {
+        return self::STRUCTURE_TYPES;
+    }
+
     public function getStructureImage()
     {
-        $mapping = [
-            'Ansiblex' => 35841,
-            'Astrahus' => 35832,
-            'Athanor' => 35835,
-            'Azbel' => 35826,
-            'POCO' => 2233,
-            'Fortizar' => 35833,
-            'Keepstar' => 35834,
-            'Mercenary Den' => 85230,
-            'Metenox' => 81826,
-            'Pharolux' => 35840,
-            'POS' => 16213,
-            'Raitaru' => 35825,
-            'Skyhook' => 81080, 
-            'Sovereignty Hub' => 32458,
-            'Sotiyo' => 35827,
-            'Tatara' => 35836,
-            'Tenebrex' => 37534,
-        ];
-
-        $typeId = $mapping[$this->structure_type] ?? 35832; // Default to Astrahus
+        $typeId = self::STRUCTURE_IMAGE_TYPE_IDS[$this->structure_type] ?? 35832;
 
         return "https://images.evetech.net/types/{$typeId}/render?size=64";
     }

@@ -70,7 +70,7 @@ class TimerNotificationService
         $groups = $this->filterGroupsByTimerRules($groups, $timer);
 
         if ($groups->isEmpty()) {
-            logger()->debug(sprintf('[Timerboard][%d] No notification groups matched the timer tag filters.', $timer->id));
+            logger()->debug(sprintf('[Timerboard][%d] No notification groups matched the timer notification filters.', $timer->id));
 
             return;
         }
@@ -85,6 +85,7 @@ class TimerNotificationService
     private function filterGroupsByTimerRules($groups, Timer $timer)
     {
         $timerRole = $timer->role_id ? (string) $timer->role_id : 'public';
+        $timerStructureType = (string) $timer->structure_type;
         $timerTagIds = $timer->tags->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -94,7 +95,7 @@ class TimerNotificationService
             ->get()
             ->keyBy('notification_group_id');
 
-        return $groups->filter(function (NotificationGroup $group) use ($filters, $timerRole, $timerTagIds) {
+        return $groups->filter(function (NotificationGroup $group) use ($filters, $timerRole, $timerStructureType, $timerTagIds) {
             $filter = $filters->get($group->id);
 
             $allowedRoleIds = collect($filter?->allowed_role_ids ?? ['public'])
@@ -116,6 +117,12 @@ class TimerNotificationService
                 return true;
             }
 
+            $allowedStructureTypes = collect($filter->allowed_structure_types ?? [])
+                ->filter(fn ($structureType) => filled($structureType))
+                ->map(fn ($structureType) => (string) $structureType)
+                ->unique()
+                ->values()
+                ->all();
             $allowedTagIds = collect($filter->allowed_tag_ids ?? [])
                 ->map(fn ($id) => (int) $id)
                 ->all();
@@ -126,6 +133,10 @@ class TimerNotificationService
             $hasBlockedTag = ! empty(array_intersect($timerTagIds, $blockedTagIds));
 
             if ($hasBlockedTag) {
+                return false;
+            }
+
+            if (!empty($allowedStructureTypes) && !in_array($timerStructureType, $allowedStructureTypes, true)) {
                 return false;
             }
 

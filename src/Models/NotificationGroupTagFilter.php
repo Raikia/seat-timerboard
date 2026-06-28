@@ -12,12 +12,14 @@ class NotificationGroupTagFilter extends Model
     protected $fillable = [
         'notification_group_id',
         'allowed_role_ids',
+        'allowed_structure_types',
         'allowed_tag_ids',
         'blocked_tag_ids',
     ];
 
     protected $casts = [
         'allowed_role_ids' => 'array',
+        'allowed_structure_types' => 'array',
         'allowed_tag_ids' => 'array',
         'blocked_tag_ids' => 'array',
     ];

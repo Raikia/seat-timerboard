@@ -25,6 +25,7 @@ class TimerNotificationServiceTest extends TestCase
         NotificationGroupTagFilter::create([
             'notification_group_id' => $group->id,
             'allowed_role_ids' => ['public'],
+            'allowed_structure_types' => [],
             'allowed_tag_ids' => [$friendly->id],
             'blocked_tag_ids' => [],
         ]);
@@ -50,6 +51,7 @@ class TimerNotificationServiceTest extends TestCase
         NotificationGroupTagFilter::create([
             'notification_group_id' => $group->id,
             'allowed_role_ids' => ['public'],
+            'allowed_structure_types' => [],
             'allowed_tag_ids' => [],
             'blocked_tag_ids' => [$hostile->id],
         ]);
@@ -105,6 +107,7 @@ class TimerNotificationServiceTest extends TestCase
         NotificationGroupTagFilter::create([
             'notification_group_id' => $group->id,
             'allowed_role_ids' => ['7'],
+            'allowed_structure_types' => [],
             'allowed_tag_ids' => [],
             'blocked_tag_ids' => [],
         ]);
@@ -118,9 +121,45 @@ class TimerNotificationServiceTest extends TestCase
         Notification::assertSentOnDemand(NewTimer::class);
     }
 
-    private function createSlackNotificationGroup(): NotificationGroup
+    public function test_it_only_sends_notifications_to_groups_with_matching_structure_types(): void
     {
-        $group = NotificationGroup::create(['name' => 'Friends']);
+        Notification::fake();
+
+        $timer = $this->createTimerWithTags(['Friendly'], [
+            'structure_name' => 'Skyhook Timer',
+            'structure_type' => 'Skyhook',
+        ]);
+
+        $matchingGroup = $this->createSlackNotificationGroup();
+        NotificationGroupTagFilter::create([
+            'notification_group_id' => $matchingGroup->id,
+            'allowed_role_ids' => ['public'],
+            'allowed_structure_types' => ['Skyhook'],
+            'allowed_tag_ids' => [],
+            'blocked_tag_ids' => [],
+        ]);
+
+        $nonMatchingGroup = $this->createSlackNotificationGroup('Cap Structures');
+        NotificationGroupTagFilter::create([
+            'notification_group_id' => $nonMatchingGroup->id,
+            'allowed_role_ids' => ['public'],
+            'allowed_structure_types' => ['Keepstar'],
+            'allowed_tag_ids' => [],
+            'blocked_tag_ids' => [],
+        ]);
+
+        $this->seedTimerboardSettings([
+            'notification_enabled' => true,
+        ]);
+
+        app(TimerNotificationService::class)->sendNewTimer($timer);
+
+        Notification::assertSentOnDemand(NewTimer::class, 1);
+    }
+
+    private function createSlackNotificationGroup(string $name = 'Friends'): NotificationGroup
+    {
+        $group = NotificationGroup::create(['name' => $name]);
         $group->alerts()->create([
             'alert' => 'seat_timerboard_new_timer',
         ]);

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Raikia\SeatTimerboard\Models\Tag;
 use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\TimerboardSetting;
@@ -381,7 +382,7 @@ class TimerboardController extends Controller
     {
         return [
             $prefix . 'system' => 'required|string',
-            $prefix . 'structure_type' => 'required|string',
+            $prefix . 'structure_type' => ['required', 'string', Rule::in(array_keys(Timer::structureTypes()))],
             $prefix . 'structure_name' => 'nullable|string',
             $prefix . 'notes' => 'nullable|string|max:20000',
             $prefix . 'owner_corporation' => 'required|string',
@@ -424,26 +425,7 @@ class TimerboardController extends Controller
 
     private function getStructureTypes(): array
     {
-        return [
-            'Ansiblex' => 'Ansiblex Jump Gate',
-            'Astrahus' => 'Astrahus',
-            'Athanor' => 'Athanor',
-            'Azbel' => 'Azbel',
-            'POCO' => 'Customs Office',
-            'Fortizar' => 'Fortizar',
-            'Keepstar' => 'Keepstar',
-            'Mercenary Den' => 'Mercenary Den',
-            'Metenox' => 'Metenox Moon Drill',
-            'Pharolux' => 'Pharolux Cyno Beacon',
-            'POS' => 'POS',
-            'Raitaru' => 'Raitaru',
-            'Skyhook' => 'Skyhook',
-            'Sovereignty Hub' => 'Sovereignty Hub',
-            'Sotiyo' => 'Sotiyo',
-            'Tatara' => 'Tatara',
-            'Tenebrex' => 'Tenebrex Jammer',
-            'Other' => 'Other',
-        ];
+        return Timer::structureTypes();
     }
 
     private function escapeLike(string $value): string

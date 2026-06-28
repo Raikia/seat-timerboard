@@ -111,6 +111,7 @@ trait CreatesDatabaseSchema
             $table->bigIncrements('id');
             $table->unsignedInteger('notification_group_id');
             $table->json('allowed_role_ids')->nullable();
+            $table->json('allowed_structure_types')->nullable();
             $table->json('allowed_tag_ids')->nullable();
             $table->json('blocked_tag_ids')->nullable();
             $table->timestamps();

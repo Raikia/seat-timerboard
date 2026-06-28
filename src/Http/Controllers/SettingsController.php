@@ -3,10 +3,11 @@
 namespace Raikia\SeatTimerboard\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Raikia\SeatTimerboard\Models\NotificationGroupTagFilter;
 use Raikia\SeatTimerboard\Models\Tag;
+use Raikia\SeatTimerboard\Models\Timer;
 use Raikia\SeatTimerboard\Models\TimerboardSetting;
 use Seat\Eveapi\Models\Alliances\Alliance;
 use Seat\Eveapi\Models\Corporation\CorporationInfo;
@@ -24,6 +25,7 @@ class SettingsController extends Controller
         $defaultRole = TimerboardSetting::find('default_timer_role');
         $defaultRoleId = $defaultRole ? $defaultRole->value : null;
         $localTimeFormat = optional(TimerboardSetting::find('local_time_format'))->value ?? '24h';
+        $structureTypes = Timer::structureTypes();
 
         $notifEnabled = TimerboardSetting::find('notification_enabled');
         $notificationEnabled = $notifEnabled ? filter_var($notifEnabled->value, FILTER_VALIDATE_BOOLEAN) : false;
@@ -48,6 +50,7 @@ class SettingsController extends Controller
             'roles',
             'defaultRoleId',
             'localTimeFormat',
+            'structureTypes',
             'notificationEnabled',
             'notificationGroups',
             'notificationGroupTagFilters',
@@ -129,6 +132,8 @@ class SettingsController extends Controller
             'notification_group_filters.*.allowed_tag_ids.*' => 'integer|exists:seat_timerboard_tags,id',
             'notification_group_filters.*.blocked_tag_ids' => 'nullable|array',
             'notification_group_filters.*.blocked_tag_ids.*' => 'integer|exists:seat_timerboard_tags,id',
+            'notification_group_filters.*.allowed_structure_types' => 'nullable|array',
+            'notification_group_filters.*.allowed_structure_types.*' => ['required', Rule::in(array_keys(Timer::structureTypes()))],
         ]);
 
         $groupFilters = collect($request->input('notification_group_filters', []))
@@ -151,16 +156,18 @@ class SettingsController extends Controller
 
             $groupFilters->each(function (array $filter) {
                 $allowedRoleIds = $this->normalizeNotificationRoleIds($filter['allowed_role_ids'] ?? []);
+                $allowedStructureTypes = $this->normalizeStructureTypes($filter['allowed_structure_types'] ?? []);
                 $allowedTagIds = $this->normalizeTagIds($filter['allowed_tag_ids'] ?? []);
                 $blockedTagIds = $this->normalizeTagIds($filter['blocked_tag_ids'] ?? []);
 
-                if ($allowedRoleIds === ['public'] && empty($allowedTagIds) && empty($blockedTagIds)) {
+                if ($allowedRoleIds === ['public'] && empty($allowedStructureTypes) && empty($allowedTagIds) && empty($blockedTagIds)) {
                     return;
                 }
 
                 NotificationGroupTagFilter::create([
                     'notification_group_id' => (int) $filter['notification_group_id'],
                     'allowed_role_ids' => $allowedRoleIds,
+                    'allowed_structure_types' => $allowedStructureTypes,
                     'allowed_tag_ids' => $allowedTagIds,
                     'blocked_tag_ids' => $blockedTagIds,
                 ]);
@@ -225,6 +232,7 @@ class SettingsController extends Controller
                 ->get()
                 ->each(function (NotificationGroupTagFilter $filter) use ($tag) {
                     $allowedRoleIds = $this->normalizeNotificationRoleIds($filter->allowed_role_ids ?? []);
+                    $allowedStructureTypes = $this->normalizeStructureTypes($filter->allowed_structure_types ?? []);
                     $allowedTagIds = collect($filter->allowed_tag_ids ?? [])
                         ->reject(fn ($id) => (int) $id === (int) $tag->id)
                         ->map(fn ($id) => (int) $id)
@@ -236,7 +244,7 @@ class SettingsController extends Controller
                         ->values()
                         ->all();
 
-                    if ($allowedRoleIds === ['public'] && empty($allowedTagIds) && empty($blockedTagIds)) {
+                    if ($allowedRoleIds === ['public'] && empty($allowedStructureTypes) && empty($allowedTagIds) && empty($blockedTagIds)) {
                         $filter->delete();
 
                         return;
@@ -244,6 +252,7 @@ class SettingsController extends Controller
 
                     $filter->update([
                         'allowed_role_ids' => $allowedRoleIds,
+                        'allowed_structure_types' => $allowedStructureTypes,
                         'allowed_tag_ids' => $allowedTagIds,
                         'blocked_tag_ids' => $blockedTagIds,
                     ]);
@@ -407,6 +416,19 @@ class SettingsController extends Controller
             ->all();
 
         return empty($normalized) ? ['public'] : $normalized;
+    }
+
+    private function normalizeStructureTypes(array $structureTypes): array
+    {
+        $allowedStructureTypes = array_keys(Timer::structureTypes());
+
+        return collect($structureTypes)
+            ->filter(fn ($structureType) => filled($structureType))
+            ->map(fn ($structureType) => (string) $structureType)
+            ->filter(fn (string $structureType) => in_array($structureType, $allowedStructureTypes, true))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function compareSearchLabels(string $left, string $right, string $query): int

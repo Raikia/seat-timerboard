@@ -31,6 +31,7 @@ class SettingsControllerTest extends TestCase
         $filter = NotificationGroupTagFilter::create([
             'notification_group_id' => $group->id,
             'allowed_role_ids' => [(string) $role->id],
+            'allowed_structure_types' => ['Skyhook'],
             'allowed_tag_ids' => [$tag->id],
             'blocked_tag_ids' => [],
         ]);
@@ -43,6 +44,7 @@ class SettingsControllerTest extends TestCase
         $filter->refresh();
 
         $this->assertSame([(string) $role->id], $filter->allowed_role_ids);
+        $this->assertSame(['Skyhook'], $filter->allowed_structure_types);
         $this->assertSame([], $filter->allowed_tag_ids);
         $this->assertSame([], $filter->blocked_tag_ids);
     }
