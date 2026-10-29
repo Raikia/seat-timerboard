@@ -657,11 +657,23 @@ class NotificationTimerImporter
                 ]);
 
             $body = $response->getBody();
+        } catch (\Throwable $e) {
+            Log::debug('Timerboard structure name lookup failed.', [
+                'structure_id' => $structureId,
+                'character_id' => $characterId,
+                'message' => $e->getMessage(),
+            ]);
 
-            if (!$body || empty($body->name)) {
-                return null;
-            }
+            return null;
+        }
 
+        if (!$body || empty($body->name)) {
+            return null;
+        }
+
+        // universe_structures needs x, y and z, but the position is optional in ESI's response.
+        // Keep the name even when the save fails.
+        try {
             UniverseStructure::updateOrCreate(
                 ['structure_id' => $structureId],
                 [
@@ -674,17 +686,14 @@ class NotificationTimerImporter
                     'z' => $body->position->z ?? null,
                 ]
             );
-
-            return $body->name;
         } catch (\Throwable $e) {
-            Log::debug('Timerboard structure name lookup failed.', [
+            Log::debug('Timerboard could not save the structure it looked up.', [
                 'structure_id' => $structureId,
-                'character_id' => $characterId,
                 'message' => $e->getMessage(),
             ]);
-
-            return null;
         }
+
+        return $body->name;
     }
 
     private function resolveStructureLookupToken(?int $characterId, ?int $corporationId): ?RefreshToken
