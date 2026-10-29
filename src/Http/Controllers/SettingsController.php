@@ -5,6 +5,7 @@ namespace Raikia\SeatTimerboard\Http\Controllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Raikia\SeatTimerboard\Integrations\ManagerCoreIntegration;
 use Raikia\SeatTimerboard\Models\NotificationGroupTagFilter;
 use Raikia\SeatTimerboard\Models\Tag;
 use Raikia\SeatTimerboard\Models\Timer;
@@ -44,6 +45,8 @@ class SettingsController extends Controller
         $trackedAllianceIds = $this->jsonSetting('tracked_alliance_ids');
         $trackedCorporations = $this->resolveTrackedCorporations($trackedCorporationIds);
         $trackedAlliances = $this->resolveTrackedAlliances($trackedAllianceIds);
+        $notificationSource = ManagerCoreIntegration::mode();
+        $managerCore = ManagerCoreIntegration::status();
 
         return view('seat-timerboard::settings', compact(
             'tags',
@@ -55,7 +58,9 @@ class SettingsController extends Controller
             'notificationGroups',
             'notificationGroupTagFilters',
             'trackedCorporations',
-            'trackedAlliances'
+            'trackedAlliances',
+            'notificationSource',
+            'managerCore'
         ));
     }
 
@@ -94,7 +99,10 @@ class SettingsController extends Controller
             'tracked_corporation_ids.*' => 'integer',
             'tracked_alliance_ids' => 'nullable|array',
             'tracked_alliance_ids.*' => 'integer',
+            'notification_source' => ['nullable', Rule::in(ManagerCoreIntegration::MODES)],
         ]);
+
+        $previousSource = ManagerCoreIntegration::mode();
 
         TimerboardSetting::updateOrCreate(
             ['setting' => 'tracked_corporation_ids'],
@@ -106,7 +114,20 @@ class SettingsController extends Controller
             ['value' => json_encode(array_values(array_unique($request->input('tracked_alliance_ids', []))))]
         );
 
-        return redirect()->route('timerboard.settings')->with('success', 'Auto-import tracking updated successfully.');
+        if ($request->filled('notification_source')) {
+            TimerboardSetting::updateOrCreate(
+                ['setting' => ManagerCoreIntegration::SETTING],
+                ['value' => $request->input('notification_source')]
+            );
+        }
+
+        $message = 'Auto-import tracking updated successfully.';
+
+        if (ManagerCoreIntegration::changeNeedsRestart($previousSource, ManagerCoreIntegration::mode())) {
+            $message .= ' Restart the SeAT worker so Manager Core starts delivering to Timerboard. Nothing else needs a restart.';
+        }
+
+        return redirect()->route('timerboard.settings')->with('success', $message);
     }
 
     public function storeNotifications(Request $request)

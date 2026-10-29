@@ -3,6 +3,7 @@
 namespace Raikia\SeatTimerboard\Observers;
 
 use Illuminate\Support\Facades\Log;
+use Raikia\SeatTimerboard\Integrations\ManagerCoreIntegration;
 use Raikia\SeatTimerboard\Services\NotificationTimerImporter;
 use Seat\Eveapi\Models\Character\CharacterNotification;
 
@@ -13,6 +14,12 @@ class CharacterNotificationObserver
      */
     public function created(CharacterNotification $notification): void
     {
+        // SeAT saves every notification type through here; most are of no use to Timerboard.
+        if (!in_array($notification->type, NotificationTimerImporter::SUPPORTED_TYPES, true)
+            || !ManagerCoreIntegration::nativeListenerActive()) {
+            return;
+        }
+
         try {
             app(NotificationTimerImporter::class)->import($notification);
         } catch (\Throwable $exception) {

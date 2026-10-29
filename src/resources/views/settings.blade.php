@@ -195,10 +195,64 @@
 
             <h5 class="mb-2">Automatic Timer Import</h5>
             <p class="text-muted mb-3">
-                Timerboard can watch new SeAT structure notifications for selected corporations and alliances, then automatically create timers when those notifications include a parseable reinforcement or anchoring date. Use this to keep friendly structure timers flowing into the board without manual entry.
+                Timerboard can watch new structure notifications for selected corporations and alliances, from SeAT itself or through Manager Core's fast poll, then automatically create timers when those notifications include a parseable reinforcement or anchoring date. Use this to keep friendly structure timers flowing into the board without manual entry.
             </p>
             <form action="{{ route('timerboard.settings.auto-import') }}" method="POST">
                 {{ csrf_field() }}
+
+                <div class="form-group">
+                    <label for="notification_source">Notification Source</label>
+                    <select name="notification_source" id="notification_source" class="form-control">
+                        <option value="auto" {{ $notificationSource === 'auto' ? 'selected' : '' }}>Auto: Manager Core fast poll when installed, SeAT native as backup (recommended)</option>
+                        <option value="manager_core" {{ $notificationSource === 'manager_core' ? 'selected' : '' }}>Manager Core fast poll only</option>
+                        <option value="seat_native" {{ $notificationSource === 'seat_native' ? 'selected' : '' }}>SeAT native only (ignores Manager Core)</option>
+                    </select>
+                    <small class="text-muted">Manager Core's fast poll checks EVE about every 2 minutes for corporations with directors in its ESI key pool. Other corporations still arrive at SeAT's normal pace.</small>
+                    <div class="mt-1">
+                        @if($managerCore['available'])
+                            <span class="badge badge-success">Manager Core installed</span>
+                        @else
+                            <span class="badge badge-secondary">Manager Core not installed</span>
+                        @endif
+
+                        @if($managerCore['uses_manager_core'] && $managerCore['uses_seat_native'])
+                            <span class="badge badge-info">Using: Manager Core fast poll, SeAT native as backup</span>
+                        @elseif($managerCore['uses_manager_core'])
+                            <span class="badge badge-info">Using: Manager Core fast poll</span>
+                        @elseif($managerCore['mode'] === 'manager_core')
+                            <span class="badge badge-warning">Using: SeAT native</span>
+                        @else
+                            <span class="badge badge-secondary">Using: SeAT native</span>
+                        @endif
+                    </div>
+                    <small class="text-muted d-block">
+                        @if($managerCore['uses_manager_core'])
+                            @if($managerCore['last_delivery_at'])
+                                Last delivery from Manager Core {{ $managerCore['last_delivery_at']->diffForHumans() }}.
+                            @else
+                                Nothing delivered by Manager Core yet. After switching away from SeAT native, restart the SeAT worker. Nothing else needs a restart.
+                            @endif
+                        @elseif($managerCore['mode'] === 'manager_core')
+                            Manager Core fast poll is selected, but Manager Core isn't installed, so timers come from SeAT's own notifications.
+                        @elseif($managerCore['available'])
+                            Manager Core is installed but not used.
+                        @else
+                            Install Manager Core for fast poll.
+                        @endif
+                    </small>
+                    @if($managerCore['uses_manager_core'])
+                        <small class="text-muted d-block">
+                            Fast poll only covers corporations with at least one director in Manager Core's ESI key pool.
+                            @if($managerCore['key_pool_url'])
+                                @can('global.superuser')
+                                    <a href="{{ $managerCore['key_pool_url'] }}">Add directors to the key pool</a>
+                                @else
+                                    A SeAT superuser can add them on Manager Core's ESI Key Pool page.
+                                @endcan
+                            @endif
+                        </small>
+                    @endif
+                </div>
 
                 <div class="form-group">
                     <label for="tracked_corporation_ids">Tracked Corporations</label>
@@ -222,7 +276,7 @@
 
                 <button type="submit" class="btn btn-primary btn-sm">Save Auto-Import Settings</button>
             </form>
-            <small class="text-muted d-block mt-2">This only applies to new SeAT notifications going forward. Imported timers will reuse your default access role and add tags like Auto Imported, Friendly, and event-specific tags when appropriate.</small>
+            <small class="text-muted d-block mt-2">This only applies to new notifications going forward. Imported timers will reuse your default access role and add tags like Auto Imported, Friendly, and event-specific tags when appropriate.</small>
         </div>
     </div>
 

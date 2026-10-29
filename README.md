@@ -10,7 +10,7 @@ It adds a `Timerboard` section to SeAT with:
 - edit and delete actions
 - tags and optional role-based visibility
 - Discord notifications for new timers
-- automatic timer imports from supported SeAT notifications
+- automatic timer imports from supported SeAT notifications, or within minutes through [Manager Core](https://github.com/MattFalahe/manager-core)'s fast poll when it's installed
 - peer-to-peer sync between SeAT instances
 - settings for defaults, notifications, display, auto-import, sync, tags, and cleanup
 
@@ -141,6 +141,37 @@ Choose which corporations and alliances should be watched for friendly structure
 - Only new notifications going forward are imported
 - Duplicate imports are ignored using a notification-derived fingerprint
 - Imported timers reuse the default access role and receive protected system tags such as `Auto Imported`, `Friendly`, `Anchoring`, `Reinforced`, and `Remote Synced` where applicable
+- Each imported timer's note says how the notification arrived (`Delivered by: ...`)
+
+### Manager Core (optional)
+
+Timerboard works with [Manager Core](https://github.com/MattFalahe/manager-core) (`mattfalahe/manager-core`), but never needs it.
+
+What it adds:
+
+- Faster timers. Manager Core checks EVE for new notifications about every 2 minutes through the directors in its ESI key pool. SeAT's own notification sync takes around 20 to 30 minutes, so reinforcement timers reach the board that much sooner.
+- A backup in `Auto` mode. If Manager Core misses a notification, SeAT's own copy still creates the timer.
+- No extra setup in Timerboard. It registers with Manager Core by itself when Manager Core is installed.
+
+Setting it up:
+
+1. Install Manager Core.
+2. Add directors to Manager Core's ESI key pool. As a SeAT superuser, open `Manager Core -> ESI Key Pool` and add at least one director from each corporation you track. Only characters with the Director role whose SeAT token includes `esi-characters.read_notifications.v1` can be added. Manager Core recommends leaving a few directors out of the pool, so SeAT's own corporation updates keep some ESI headroom.
+3. Pick the notification source under `Timerboard -> Settings -> Automatic Timer Import`. `Auto` is the default.
+
+The sources:
+
+- `Auto` (default): Manager Core when it is installed, with SeAT's own notifications kept as a backup. Whichever arrives first creates the timer, and the fingerprint drops the copy.
+- `Manager Core fast poll only`: only Manager Core delivers. If Manager Core is removed, Timerboard goes back to SeAT's notifications by itself.
+- `SeAT native only`: Manager Core is ignored even when installed.
+
+Below the choice, the settings page shows whether Manager Core is installed, which source is actually in use, and, for superusers, a link to Manager Core's key pool.
+
+Notes:
+
+- Fast poll only speeds up corporations that have directors in Manager Core's ESI key pool. Other corporations still arrive at SeAT's own pace. With several directors per corporation it gets close to 2 minutes; with one it can take up to about 10.
+- After switching away from `SeAT native only`, restart the SeAT `worker` so Manager Core starts delivering to Timerboard. Only the worker needs it: Manager Core's poll runs there, while web pages and the scheduler pick up the setting by themselves.
+- Manager Core is never required. Without it, Timerboard works exactly as before.
 
 ### Sync
 

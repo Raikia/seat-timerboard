@@ -3,6 +3,7 @@
 namespace Raikia\SeatTimerboard\Services;
 
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Raikia\SeatTimerboard\Models\Tag;
@@ -22,16 +23,28 @@ class NotificationTimerImporter
 {
     private const UNIVERSE_STRUCTURES_SCOPE = 'esi-universe.read_structures.v1';
 
+    public const SUPPORTED_TYPES = [
+        'StructureAnchoring',
+        'StructureLostArmor',
+        'StructureLostShields',
+        'SkyhookLostShields',
+        'MercenaryDenReinforced',
+        'OrbitalReinforced',
+        'SovStructureReinforced',
+    ];
+
     /**
      * Import a timer from a newly created SeAT character notification when applicable.
      */
-    public function import(CharacterNotification $notification): ?Timer
+    public function import(CharacterNotification $notification, ?string $deliveredBy = null): ?Timer
     {
         $trackingContext = $this->resolveTrackingContext($notification);
 
         if (!$trackingContext) {
             return null;
         }
+
+        $trackingContext['delivered_by'] = $deliveredBy ?? 'SeAT notification sync';
 
         $payload = $this->buildPayload($notification, $trackingContext);
 
@@ -49,27 +62,40 @@ class NotificationTimerImporter
             return $existing;
         }
 
-        return DB::transaction(function () use ($payload) {
-            $timer = new Timer();
-            $timer->fill([
-                'system' => $payload['system'],
-                'structure_type' => $payload['structure_type'],
-                'structure_name' => $payload['structure_name'],
-                'notes' => $payload['notes'],
-                'owner_corporation' => $payload['owner_corporation'],
-                'attacker_corporation' => $payload['attacker_corporation'],
-                'role_id' => $payload['role_id'],
-                'import_fingerprint' => $payload['import_fingerprint'],
-                'source_notification_type' => $payload['source_notification_type'],
-            ]);
-            $timer->user_id = $payload['user_id'];
-            $timer->eve_time = $payload['eve_time'];
-            $timer->save();
-            $timer->tags()->sync($payload['tag_ids']);
-            app(TimerMutationDispatcher::class)->dispatchSaved($timer, true);
+        try {
+            return DB::transaction(function () use ($payload) {
+                $timer = new Timer();
+                $timer->fill([
+                    'system' => $payload['system'],
+                    'structure_type' => $payload['structure_type'],
+                    'structure_name' => $payload['structure_name'],
+                    'notes' => $payload['notes'],
+                    'owner_corporation' => $payload['owner_corporation'],
+                    'attacker_corporation' => $payload['attacker_corporation'],
+                    'role_id' => $payload['role_id'],
+                    'import_fingerprint' => $payload['import_fingerprint'],
+                    'source_notification_type' => $payload['source_notification_type'],
+                ]);
+                $timer->user_id = $payload['user_id'];
+                $timer->eve_time = $payload['eve_time'];
+                $timer->save();
+                $timer->tags()->sync($payload['tag_ids']);
+                app(TimerMutationDispatcher::class)->dispatchSaved($timer, true);
 
-            return $timer;
-        });
+                return $timer;
+            });
+        } catch (QueryException $exception) {
+            // Copies of the same event can pass the lookup above together, since every
+            // director gets one and Manager Core's queued jobs run side by side. The
+            // unique fingerprint lets one insert and the others return it.
+            $existing = Timer::where('import_fingerprint', $payload['import_fingerprint'])->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            throw $exception;
+        }
     }
 
     private function resolveTrackingContext(CharacterNotification $notification): ?array
@@ -377,6 +403,7 @@ class NotificationTimerImporter
         $lines = array_filter(array_merge([
             'Auto-imported from SeAT notification.',
             'Source type: ' . $notification->type,
+            'Delivered by: ' . $trackingContext['delivered_by'],
             'Notification timestamp (UTC): ' . $notification->timestamp->copy()->setTimezone('UTC')->format('Y.m.d H:i:s'),
             'Tracked corporation: ' . $trackingContext['recipient_corporation_name'],
             $trackingContext['recipient_alliance_name'] ? 'Tracked alliance: ' . $trackingContext['recipient_alliance_name'] : null,

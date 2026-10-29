@@ -2,8 +2,13 @@
 
 namespace Raikia\SeatTimerboard\Tests\Unit\Services;
 
+use Illuminate\Database\Events\TransactionRolledBack;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Mockery;
+use Raikia\SeatTimerboard\Handlers\ManagerCoreNotificationHandler;
 use Raikia\SeatTimerboard\Models\Timer;
+use Raikia\SeatTimerboard\Models\TimerboardSetting;
 use Raikia\SeatTimerboard\Services\NotificationTimerImporter;
 use Raikia\SeatTimerboard\Services\TimerMutationDispatcher;
 use Raikia\SeatTimerboard\Tests\TestCase;
@@ -177,6 +182,100 @@ class NotificationTimerImporterTest extends TestCase
         $this->assertSame(0, Timer::count());
     }
 
+    public function test_it_imports_a_timer_delivered_by_manager_core(): void
+    {
+        $this->seedTimerboardSettings([
+            'tracked_corporation_ids' => [98765],
+        ]);
+        $this->seedTrackedCharacterContext();
+        $this->seedReferenceLocationData();
+        $this->mockSavedDispatch();
+
+        ManagerCoreNotificationHandler::handle($this->managerCoreNotification());
+
+        $timer = Timer::first();
+
+        $this->assertNotNull($timer);
+        $this->assertSame('Jita IV', $timer->system);
+        $this->assertSame('POCO', $timer->structure_type);
+        $this->assertStringContainsString('Delivered by: Manager Core fast poll', $timer->notes);
+        $this->assertNotNull(TimerboardSetting::find('manager_core_last_delivery_at'));
+    }
+
+    public function test_it_ignores_manager_core_deliveries_in_seat_native_mode(): void
+    {
+        $this->seedTimerboardSettings([
+            'tracked_corporation_ids' => [98765],
+            'notification_source' => 'seat_native',
+        ]);
+        $this->seedTrackedCharacterContext();
+        $this->seedReferenceLocationData();
+
+        ManagerCoreNotificationHandler::handle($this->managerCoreNotification());
+
+        $this->assertSame(0, Timer::count());
+        $this->assertNull(TimerboardSetting::find('manager_core_last_delivery_at'));
+    }
+
+    public function test_the_same_event_from_manager_core_and_seat_creates_one_timer(): void
+    {
+        $this->seedTimerboardSettings([
+            'tracked_corporation_ids' => [98765],
+        ]);
+        $this->seedTrackedCharacterContext();
+        $this->seedReferenceLocationData();
+        $this->mockSavedDispatch();
+        $text = $this->orbitalReinforcedText(now('UTC')->addHours(2));
+
+        ManagerCoreNotificationHandler::handle($this->managerCoreNotification(['text' => $text]));
+        $fromSeat = app(NotificationTimerImporter::class)->import($this->createNotification([
+            'notification_id' => 2000000002,
+            'text' => $text,
+        ]));
+
+        $this->assertSame(1, Timer::count());
+        $this->assertSame(Timer::first()->id, $fromSeat->id);
+    }
+
+    public function test_an_insert_race_returns_the_timer_that_won(): void
+    {
+        $this->seedTimerboardSettings([
+            'tracked_corporation_ids' => [98765],
+        ]);
+        $this->seedTrackedCharacterContext();
+        $this->seedReferenceLocationData();
+
+        $dispatcher = Mockery::mock(TimerMutationDispatcher::class);
+        $dispatcher->shouldNotReceive('dispatchSaved');
+        $this->app->instance(TimerMutationDispatcher::class, $dispatcher);
+
+        // Stand in for another worker: its copy lands between this import's lookup and
+        // its insert, and is still there once this import's transaction rolls back.
+        $winner = null;
+        Timer::creating(function (Timer $timer) use (&$winner) {
+            $winner = [
+                'system' => $timer->system,
+                'structure_type' => $timer->structure_type,
+                'owner_corporation' => $timer->owner_corporation,
+                'eve_time' => $timer->eve_time,
+                'import_fingerprint' => $timer->import_fingerprint,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+            DB::table('seat_timerboard_timers')->insert($winner);
+        });
+        Event::listen(TransactionRolledBack::class, function () use (&$winner) {
+            DB::table('seat_timerboard_timers')->insert($winner);
+        });
+
+        $timer = app(NotificationTimerImporter::class)->import($this->createNotification([
+            'text' => $this->orbitalReinforcedText(now('UTC')->addHours(2)),
+        ]));
+
+        $this->assertNotNull($timer);
+        $this->assertSame(1, Timer::count());
+    }
+
     private function seedTrackedCharacterContext(bool $includeAlliance = false): void
     {
         CharacterInfo::create([
@@ -260,5 +359,32 @@ class NotificationTimerImporterTest extends TestCase
     private function dateToMssqlTimestamp(\Carbon\CarbonInterface $date): string
     {
         return (string) (($date->copy()->setTimezone('UTC')->timestamp + 11644473600) * 10000000);
+    }
+
+    private function orbitalReinforcedText(\Carbon\CarbonInterface $exitAt): string
+    {
+        return implode("\n", [
+            'planetID: 40121487',
+            'typeID: 2233',
+            'reinforceExitTime: ' . $this->dateToMssqlTimestamp($exitAt),
+            'solarSystemID: 30000142',
+        ]);
+    }
+
+    private function managerCoreNotification(array $overrides = []): object
+    {
+        // Shaped like a manager_core_esi_notifications row; the timestamp arrives as a string.
+        return (object) array_merge([
+            'id' => 1,
+            'notification_id' => 3000000001,
+            'character_id' => 90000001,
+            'corporation_id' => 98765,
+            'type' => 'OrbitalReinforced',
+            'sender_id' => 1000125,
+            'sender_type' => 'corporation',
+            'timestamp' => now('UTC')->toDateTimeString(),
+            'text' => $this->orbitalReinforcedText(now('UTC')->addHours(2)),
+            'source' => 'fast_poll',
+        ], $overrides);
     }
 }

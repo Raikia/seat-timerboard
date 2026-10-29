@@ -14,6 +14,9 @@
         "eveseat/eveapi": "^5.0",
         "eveseat/web": "^5.0"
     },
+    "suggest": {
+        "mattfalahe/manager-core": "Faster timer imports through Manager Core's fast poll"
+    },
     "autoload": {
         "psr-4": {
             "Raikia\\SeatTimerboard\\": "src/",

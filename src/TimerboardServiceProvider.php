@@ -5,6 +5,7 @@ namespace Raikia\SeatTimerboard;
 use Raikia\SeatTimerboard\Console\Commands\PullTimerSyncPeers;
 use Raikia\SeatTimerboard\database\seeds\TimerboardSeeder;
 use Raikia\SeatTimerboard\Database\Seeds\ScheduleSeeder;
+use Raikia\SeatTimerboard\Integrations\ManagerCoreIntegration;
 use Raikia\SeatTimerboard\Observers\CharacterNotificationObserver;
 use Seat\Services\AbstractSeatPlugin;
 use Seat\Eveapi\Models\Character\CharacterNotification;
@@ -26,6 +27,8 @@ class TimerboardServiceProvider extends AbstractSeatPlugin
         $this->registerCommands();
 
         CharacterNotification::observe(CharacterNotificationObserver::class);
+        ManagerCoreIntegration::registerNotificationHandler();
+        ManagerCoreIntegration::registerWithBridge();
         $this->registerDatabaseSeeders([
             TimerboardSeeder::class,
             ScheduleSeeder::class,
